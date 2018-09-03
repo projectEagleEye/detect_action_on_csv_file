@@ -17,8 +17,8 @@ def get_action(port_stream):
     :return: STRING - classified action
     """
     # checks if "port_stream" parameter is a list type
-    if not isinstance(port_stream, list):
-        print("ERROR - calibration_retrieve_mean(port_stream): port_stream is not a list type")
+    if not isinstance(port_stream, np.ndarray):
+        print("ERROR - calibration_retrieve_mean(port_stream): port_stream is not a numpy ndarray type")
         return None
 
     # get mean value as base reference value for calibration

@@ -17,7 +17,7 @@ def get_processed_data(csv_file, sensor_cols, data_type_col, data_type, transpos
     :param sensor_cols: INT ARRAY - integer index of sensor columns in csv file
     :param data_type_col: INT - integer index of "data_type"
     :param data_type: STRING - name of the type of csv data to collect (eg. "Person0/eeg"
-    :param data_type: BOOLEAN - transpose the csv data output 2D numpy array (default=True)
+    :param transposition: BOOLEAN - transpose the csv data output 2D numpy array (default=True)
     :return: NUMPY FLOAT ARRAY - processed data
     """
     # perform error checking on parameters
