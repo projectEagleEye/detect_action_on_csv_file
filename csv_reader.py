@@ -10,11 +10,15 @@ import csv
 import numpy as np
 
 
-def get_processed_data(csv_file, sensor_cols, data_type_col, data_type, transposition=True):
+def get_processed_data(csv_file,
+                       sensor_cols,
+                       data_type_col,
+                       data_type,
+                       transposition=True):
     """
     main function that returns processed data from csv
     :param csv_file: STRING - file path directory
-    :param sensor_cols: INT ARRAY - integer index of sensor columns in csv file
+    :param sensor_cols: INT LIST - integer index of sensor columns in csv file
     :param data_type_col: INT - integer index of "data_type"
     :param data_type: STRING - name of the type of csv data to collect (eg. "Person0/eeg"
     :param transposition: BOOLEAN - transpose the csv data output 2D numpy array (default=True)
@@ -34,14 +38,18 @@ def get_processed_data(csv_file, sensor_cols, data_type_col, data_type, transpos
 
     # get raw and processed data from csv file
     raw_data = get_raw_data(csv_file)
-    return process_data(raw_data, sensor_cols, data_type_col, data_type, transposition)
+    return process_data(raw_data,
+                        sensor_cols,
+                        data_type_col,
+                        data_type,
+                        transposition)
 
 
 def get_raw_data(csv_file):
     """
     function that extracts data from csv file located at "csv_file" directory
     :param csv_file: STRING - file path directory
-    :return: STRING 2-D LIST - raw csv data
+    :return: STRING 2D LIST - raw csv data
     """
     raw_muse_data = []
     try:
@@ -56,7 +64,11 @@ def get_raw_data(csv_file):
         print("ERROR - get_data_from_csv(csv_file): unable to read csv file")
 
 
-def process_data(raw_data, sensor_cols, data_type_col, data_type, transposition):
+def process_data(raw_data,
+                 sensor_cols,
+                 data_type_col,
+                 data_type,
+                 transposition):
     """
     function that cleans up "raw_data" by:
     1) extract string values at each "sensor_cols"
@@ -81,8 +93,8 @@ def process_data(raw_data, sensor_cols, data_type_col, data_type, transposition)
             temp_list = []
             # iterate through each sensor column of each data row to extract value
             for sensor_col in sensor_cols:
-                # replace blank data with zeros and convert data type to float
-                if each_row[sensor_col] != "":
+                # replace blank or invalid elements with zeros and convert data type to float
+                if np.isfinite(float(each_row[sensor_col])):
                     temp_list += [float(each_row[sensor_col])]
                 else:
                     temp_list += [float(0)]
@@ -105,12 +117,13 @@ if __name__ == '__main__':
     data_type = " Person0/eeg"
     transposition = False
     raw_data = get_raw_data(csv_file)
-    processed_data = get_processed_data(csv_file, sensor_cols, data_type_col, data_type, transposition)
+    processed_data = get_processed_data(csv_file,
+                                        sensor_cols,
+                                        data_type_col,
+                                        data_type,
+                                        transposition)
     print(raw_data)
     print("______________________")
     print(processed_data)
     print(processed_data.shape)
-    print(type(csv_file))
-    print(type(sensor_cols))
-    print(type(data_type_col))
-    print(type(data_type))
+    print(processed_data[1])
