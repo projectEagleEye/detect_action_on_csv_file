@@ -25,6 +25,7 @@ def get_analytics(ports_stream_df):
 
 
 def print_histogram(ports_stream_df,
+                    file_name,
                     n_bins=250,
                     has_density=False,
                     xlim=None,
@@ -36,6 +37,7 @@ def print_histogram(ports_stream_df,
     """
     function that uses a pandas dataframe to display a histogram for each data column
     :param ports_stream_df: PANDAS DATAFRAME
+    :param file_name: STRING - file name to distinguish among other csv files
     :param n_bins: INT - set number of bin divisions (default=250)
     :param has_density: BOOLEAN - set density (y-axis): True=probability || False=count (default=False)
     :param xlim: DOUBLE LIST || NONE - (<x.min>, <x.max>) || None (default=None)
@@ -61,7 +63,7 @@ def print_histogram(ports_stream_df,
             else:
                 plt.ylabel("Frequency")
             # retrieve column name from each column in the dataframe
-            plt.title("Histogram: " + ports_stream_df.dtypes.index[col])
+            plt.title("Histogram: " + ports_stream_df.dtypes.index[col] + " (" + file_name + ")")
             plt.xlim(xlim)
             plt.grid(show_grid)
 
@@ -80,6 +82,7 @@ def print_histogram(ports_stream_df,
 
 
 def print_scatter_plot(ports_stream_df,
+                       file_name,
                        marker="*",
                        linewidth=0.01,
                        show_grid=True,
@@ -90,6 +93,7 @@ def print_scatter_plot(ports_stream_df,
     """
     function that uses a pandas dataframe to display a scatter plot for each data column
     :param ports_stream_df: PANDAS DATAFRAME
+    :param file_name: STRING - file name to distinguish among other csv files
     :param marker: STRING || NONE - marker type (default:'*')
     :param linewidth: INT || NONE - linewidth (default:0.01)
     :param show_grid: BOOLEAN - whether to show grid on scatter plot (default=True)
@@ -114,7 +118,7 @@ def print_scatter_plot(ports_stream_df,
             plt.xlabel("Time (1/256 sec)")
             plt.ylabel("Voltage (mV)")
             # retrieve column name from each column in the dataframe
-            plt.title("Scatter Plot: " + ports_stream_df.dtypes.index[col])
+            plt.title("Scatter Plot: " + ports_stream_df.dtypes.index[col] + " (" + file_name + ")")
             plt.grid(show_grid)
 
             # output scatter plot
@@ -185,9 +189,9 @@ if __name__ == "__main__":
     # get analytics
     ports_stream_analytics = get_analytics(ports_stream_df)
     # get histogram
-    print_histogram(ports_stream_df)
+    print_histogram(ports_stream_df, csv_file)
     # get scatter plot
-    print_scatter_plot(ports_stream_df)
+    print_scatter_plot(ports_stream_df, csv_file)
 
     print(ports_stream_analytics)
     print(ports_stream_df.shape)
