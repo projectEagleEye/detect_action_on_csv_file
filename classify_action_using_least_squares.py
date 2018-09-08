@@ -7,23 +7,19 @@
 
 # import necessary libraries and files
 import numpy as np
-import calibration_mean
+import csv_analytics
 
 
 def get_action(ports_stream, use_default_mean):
     """
-    function that takes in "port_stream" parameter to classify a body action based on the data
+    function that takes in "ports_stream" parameter to classify a body action based on the data
     stream
     :param ports_stream: NUMPY FLOAT ARRAY - a parallel stream of data from each of the sensors
     :return: STRING - classified action in a numpy list
     """
-    # checks if "port_stream" parameter is a list type
-    if not isinstance(ports_stream, np.ndarray):
-        print("ERROR - calibration_retrieve_mean(port_stream): port_stream is not a numpy ndarray type")
-        return None
 
-    # get mean value as base reference value for calibration (use with broadcast: numpy array type of varying length)
-    mean_value = calibration_mean.get_calibration_mean(ports_stream, use_default_mean)
+    # get mean value as base reference value for calibration
+    mean_value = csv_analytics.get_calibration_mean(ports_stream, use_default_mean)
 
     # initiate counter numpy array for return
     counter = 0
