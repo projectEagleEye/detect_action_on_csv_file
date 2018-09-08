@@ -6,8 +6,8 @@
 """
 
 # import necessary libraries and files
-import csv_reader
-import classify_action_using_least_squares
+import csv_analytics
+import projection_classifier
 
 
 def get_action(csv_file,
@@ -26,13 +26,13 @@ def get_action(csv_file,
     :return: NUMPY ARRAY - [integer, detected action]
     """
     # get processed data
-    ports_stream = csv_reader.get_processed_data(csv_file,
-                                                 sensor_cols,
-                                                 data_type_col,
-                                                 data_type,
-                                                 transposition)
+    ports_stream_df = csv_analytics.get_dataframe(csv_file,
+                                                  sensor_cols,
+                                                  data_type_col,
+                                                  data_type,
+                                                  transposition)
 
-    return classify_action_using_least_squares.get_action(ports_stream, use_default_mean)
+    return projection_classifier.get_action(ports_stream_df, use_default_mean)
 
 
 # CODE TESTING
