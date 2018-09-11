@@ -37,51 +37,73 @@ def get_action(ports_stream, use_default_mean):
 
 def get_signal_vectors(ports_stream_df,
                        calibration_mean,
-                       start_x_interval,
-                       end_x_interval,
-                       y_interval):
+                       time_interval,
+                       voltage_interval):
     """
     function that output signal vectors for each port found from the "ports_stream_df"
     :param ports_stream_df: PANDAS DATAFRAME
     :param calibration_mean: NUMPY FLOAT ARRAY
-    :param start_x_interval: INT - the interval after the signal is and holds above or below the y-interval on the
-    calibration_mean to begin recording of the signal vector
-    :param end_x_interval: INT - the interval before the signal restores within the y-interval on the calibration_mean
-    to end recording of the signal vector
-    :param y_interval: INT - the interval above or below the calibration_mean which triggers recording of the signal
+    :param time_interval: INT - the interval the signal holds above or below the voltage-interval on the
+    calibration_mean to begin or end recording of the signal vector
+    :param voltage_interval: INT - the interval above or below the calibration_mean which triggers recording of the signal
     vector when breached
-    :return: FLOAT LIST - a 3D nested list that contains the signal vectors for each port
+    :return: LIST - contains the signal vectors for each port as a list of 2D numpy arrays
     """
     # TODO: get_signal_vectors()
     # get the number of rows and columns from the dataset
     num_rows = ports_stream_df.shape[0]
     num_cols = ports_stream_df.shape[1]
 
-    # instantiate
+    # instantiate a rolling FIFO numpy array to extract signal vectora once all values of in a column is greater or
+    # less than calibration_mean +- voltage_interval, respectively. The shape of the array is (time_interval, num_cols)
+    rolling_fifo = np.full((time_interval, num_cols), calibration_mean)
+    # TODO: rolling_fifo - append to last row and then pop first row to maintain array shape
 
-    return
+    return [np.full((2, 3), 0)]
 
 
 def get_reference_vectors(ports_stream_df,
                           calibration_mean,
-                          start_x_interval,
-                          end_x_interval,
-                          y_interval):
+                          time_interval,
+                          voltage_interval):
     """
     function that output reference vectors for a body action
     :param ports_stream_df: PANDAS DATAFRAME - contain multiple repeated signal vectors of the desired body action
     :param calibration_mean: NUMPY FLOAT ARRAY
-    :param start_x_interval: INT - the interval after the signal is and holds above or below the y-interval on the
-    calibration_mean to begin recording of the signal vector
-    :param end_x_interval: INT - the interval before the signal restores within the y-interval on the calibration_mean
-    to end recording of the signal vector
-    :param y_interval: INT - the interval above or below the calibration_mean which triggers recording of the signal
+    :param time_interval: INT - the interval the signal holds above or below the voltage-interval on the
+    calibration_mean to begin or end recording of the signal vector
+    :param voltage_interval: INT - the interval above or below the calibration_mean which triggers recording of the signal
     vector when breached
-    :return: FLOAT LIST - a 3D nested list that contains the signal vectors for each port
+    :return: NUMPY ARRAY - signal vectors for each port
     """
-    # TODO: get_reference_vectors()
+    # get the number of rows and columns from the dataset
+    num_cols = ports_stream_df.shape[1]
 
-    return
+    # call get_signal_vectors function to get a list of signal vectors before processing
+    signal_vectors = get_signal_vectors(ports_stream_df, calibration_mean, time_interval, voltage_interval)
+
+    # get max signal vector row length in the signal_vectors list
+    max_rows = 0
+    for signal_vector in signal_vectors:
+        if max_rows < signal_vector.shape[0]:
+            max_rows = signal_vector.shape[0]
+
+    # initiate numpy array to store reference vectors
+    reference_vectors = np.zeros((max_rows, 0))
+
+    # get reference vector through finding the mean among vectors of the same column
+    col_matrix = np.zeros((max_rows, 0))
+    for col in range(num_cols):
+        for signal_vector in signal_vectors:
+            # resize signal vectors by adding 0s and then find mean
+            num_padding = max_rows - signal_vector.shape[0]
+            signal_vector = np.pad(signal_vector, ((0, num_padding), (0, 0)), "constant", constant_values=0)
+
+            col_matrix = np.append(col_matrix, signal_vector[:, col].reshape((max_rows, 1)), axis=1)
+        col_mean = np.mean(col_matrix, axis=1).reshape((max_rows, 1))
+        reference_vectors = np.append(reference_vectors, col_mean, axis=1)
+
+    return reference_vectors
 
 
 def get_projection_classification(signal_vectors, reference_vectors):
@@ -93,6 +115,7 @@ def get_projection_classification(signal_vectors, reference_vectors):
     :return: INT - index into which action reference vector the scalar projection value was the highest
     """
     # TODO: get_projection_classification()
+    
 
     return
 
