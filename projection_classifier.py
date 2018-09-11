@@ -91,17 +91,17 @@ def get_reference_vectors(ports_stream_df,
     # initiate numpy array to store reference vectors
     reference_vectors = np.zeros((max_rows, 0))
 
-    # get reference vector through finding the mean among vectors of the same column
-    col_matrix = np.zeros((max_rows, 0))
-    for col in range(num_cols):
-        for signal_vector in signal_vectors:
-            # resize signal vectors by adding 0s and then find mean
-            num_padding = max_rows - signal_vector.shape[0]
-            signal_vector = np.pad(signal_vector, ((0, num_padding), (0, 0)), "constant", constant_values=0)
+    # initialize temporary 3d tensor to hold all signal matrices after zero padding
+    signal_3d_tensor = np.zeros((max_rows, num_cols, 0))
+    for signal_vector in signal_vectors:
+        # resize signal vectors by adding 0s
+        num_padding = max_rows - signal_vector.shape[0]
+        signal_vector = np.pad(signal_vector, ((0, num_padding), (0, 0)), "constant", constant_values=0)
 
-            col_matrix = np.append(col_matrix, signal_vector[:, col].reshape((max_rows, 1)), axis=1)
-        col_mean = np.mean(col_matrix, axis=1).reshape((max_rows, 1))
-        reference_vectors = np.append(reference_vectors, col_mean, axis=1)
+        signal_3d_tensor = np.dstack((signal_3d_tensor, signal_vector))
+
+    # get reference vector through finding the mean among vectors of the same column
+    reference_vectors = np.mean(signal_3d_tensor, axis=2)
 
     return reference_vectors
 
