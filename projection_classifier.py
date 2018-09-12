@@ -35,7 +35,7 @@ def get_action(ports_stream, use_default_mean):
     return detected_action_arr
 
 
-def get_signal_vectors(ports_stream_df,
+def get_signal_3d_tensor(ports_stream_df,
                        calibration_mean,
                        time_interval,
                        voltage_interval):
@@ -49,7 +49,7 @@ def get_signal_vectors(ports_stream_df,
     vector when breached
     :return: LIST - contains the signal vectors for each port as a list of 2D numpy arrays
     """
-    # TODO: get_signal_vectors()
+    # TODO: get_signal_3d_tensor()
     # get the number of rows and columns from the dataset
     num_rows = ports_stream_df.shape[0]
     num_cols = ports_stream_df.shape[1]
@@ -79,38 +79,38 @@ def get_reference_vectors(ports_stream_df,
     # get the number of rows and columns from the dataset
     num_cols = ports_stream_df.shape[1]
 
-    # call get_signal_vectors function to get a list of signal vectors before processing
-    signal_vectors = get_signal_vectors(ports_stream_df, calibration_mean, time_interval, voltage_interval)
+    # call get_signal_3d_tensor function to get a list of signal vectors before processing
+    signal_3d_tensor = get_signal_3d_tensor(ports_stream_df, calibration_mean, time_interval, voltage_interval)
 
-    # get max signal vector row length in the signal_vectors list
+    # get max signal vector row length in the signal_3d_tensor list
     max_rows = 0
-    for signal_vector in signal_vectors:
-        if max_rows < signal_vector.shape[0]:
-            max_rows = signal_vector.shape[0]
+    for signal_matrix in signal_3d_tensor:
+        if max_rows < signal_matrix.shape[0]:
+            max_rows = signal_matrix.shape[0]
 
     # initiate numpy array to store reference vectors
     reference_vectors = np.zeros((max_rows, 0))
 
     # initialize temporary 3d tensor to hold all signal matrices after zero padding
-    signal_3d_tensor = np.zeros((max_rows, num_cols, 0))
-    for signal_vector in signal_vectors:
+    temp_signal_3d_tensor = np.zeros((max_rows, num_cols, 0))
+    for signal_matrix in signal_3d_tensor:
         # resize signal vectors by adding 0s
-        num_padding = max_rows - signal_vector.shape[0]
-        signal_vector = np.pad(signal_vector, ((0, num_padding), (0, 0)), "constant", constant_values=0)
+        num_padding = max_rows - signal_matrix.shape[0]
+        signal_matrix = np.pad(signal_matrix, ((0, num_padding), (0, 0)), "constant", constant_values=0)
 
-        signal_3d_tensor = np.dstack((signal_3d_tensor, signal_vector))
+        temp_signal_3d_tensor = np.dstack((temp_signal_3d_tensor, signal_matrix))
 
     # get reference vector through finding the mean among vectors of the same column
-    reference_vectors = np.mean(signal_3d_tensor, axis=2)
+    reference_vectors = np.mean(temp_signal_3d_tensor, axis=2)
 
     return reference_vectors
 
 
-def get_projection_classification(signal_vectors, reference_vectors):
+def get_projection_classification(signal_3d_tensor, reference_vectors):
     """
     function that take each batch of signal vectors and compare to each batch of reference vectors by projection. The
     projection action with the highest value indicates highest similarity with the reference action
-    :param signal_vectors: NUMPY ARRAY 2D LISTS - shape=(vector_length, num_ports, num_vectors)
+    :param signal_3d_tensor: NUMPY ARRAY 2D LISTS - shape=(vector_length, num_ports, num_vectors)
     :param reference_vectors: NUMPY ARRAY 2D LISTS - shape=(vector_length, num_ports, num_actions)
     :return: INT - index into which action reference vector the scalar projection value was the highest
     """
