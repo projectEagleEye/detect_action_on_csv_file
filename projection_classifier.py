@@ -159,12 +159,12 @@ def get_reference_matrix(ports_stream,
     for signal_matrix in signal_3d_tensor:
         # resize signal vectors by adding 0s
         num_padding = max_rows - signal_matrix.shape[0]
-        signal_matrix = np.pad(signal_matrix, ((0, num_padding), (0, 0)), "constant", constant_values=0)
+        signal_matrix = np.pad(signal_matrix, ((0, num_padding), (0, 0)), "constant", constant_values=np.nan)
 
         temp_signal_3d_tensor = np.dstack((temp_signal_3d_tensor, signal_matrix))
 
-    # get reference vector through finding the mean among vectors of the same column
-    reference_vectors = np.mean(temp_signal_3d_tensor, axis=2)
+    # get reference vector through finding the mean among vectors of the same column and skipping nan values
+    reference_vectors = np.nanmean(temp_signal_3d_tensor, axis=2)
 
     return reference_vectors
 
@@ -190,7 +190,7 @@ if __name__ == "__main__":
 
     import csv_reader
 
-    csv_file = "Blinks1.csv"
+    csv_file = "Blinks30.csv"
     sensor_cols = [2, 3, 4, 5]
     data_type_col = 1
     data_type = " Person0/eeg"
@@ -205,14 +205,15 @@ if __name__ == "__main__":
     voltage_interval = [80, 20, 25, 80]
 
     # TEST: get_signal_3d_tensor()
-    """signal_3d_tensor = get_signal_3d_tensor(ports_stream, calibration_mean, time_interval, voltage_interval)
+    signal_3d_tensor = get_signal_3d_tensor(ports_stream, calibration_mean, time_interval, voltage_interval)
     print(signal_3d_tensor)
     for i in range(len(signal_3d_tensor)):
         print(signal_3d_tensor[i].shape)
-    print("My program took", time.time() - start_time, "seconds to run")"""
+    print(len(signal_3d_tensor))
+    print("My program took", time.time() - start_time, "seconds to run")
 
     # TEST: get_reference_matrix()
-    reference_matrix = get_reference_matrix(ports_stream, calibration_mean, time_interval, voltage_interval)
+    """reference_matrix = get_reference_matrix(ports_stream, calibration_mean, time_interval, voltage_interval)
     print(reference_matrix)
-    print(reference_matrix.shape)
+    print(reference_matrix.shape)"""
 
