@@ -11,8 +11,10 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import csv_reader
 
+# declare default mean for get_calibration functions
+default_mean = 847.23
 
-def get_calibration_mean(ports_stream_df, use_default_mean=False):
+def get_calibration_mean(ports_stream, use_default_mean=False):
     """
     function for calibration that finds the mean of the of the dataframe to be used by the classify action
     function as a base reference value
@@ -21,7 +23,21 @@ def get_calibration_mean(ports_stream_df, use_default_mean=False):
     :return: NUMPY FLOAT ARRAY - size of number of columns (ports) in the dataframe
     """
     if use_default_mean:
-        return np.full((1, ports_stream_df.shape[1]), 842.6)
+        return np.full((1, ports_stream.shape[1]), default_mean)
+    else:
+        return np.mean(ports_stream, axis=0, keepdims=True)
+
+
+def get_calibration_mean_df(ports_stream_df, use_default_mean=False):
+    """
+    function for calibration that finds the mean of the of the dataframe to be used by the classify action
+    function as a base reference value
+    :param ports_stream_df: PANDAS DATAFRAME
+    :param use_default_mean: BOOLEAN - use default calibration mean (default=842.6)
+    :return: NUMPY FLOAT ARRAY - size of number of columns (ports) in the dataframe
+    """
+    if use_default_mean:
+        return np.full((1, ports_stream_df.shape[1]), default_mean)
     else:
         return np.array(ports_stream_df.mean()).reshape((1, ports_stream_df.shape[1]))
 
@@ -192,7 +208,14 @@ if __name__ == "__main__":
     has_density = False
     xlim = None
     show_grid = True
-    # get scatter plot parameters
+
+
+    # get ports_stream
+    ports_stream = csv_reader.get_processed_data(csv_file,
+                                                 sensor_cols,
+                                                 data_type_col,
+                                                 data_type,
+                                                 transposition)
 
 
     # get dataframe
@@ -203,15 +226,19 @@ if __name__ == "__main__":
                                     transposition)
     # get analytics
     ports_stream_analytics = get_describe(ports_stream_df)
-    """# get histogram
+    # get histogram
     print_histogram(ports_stream_df, csv_file)
     # get scatter plot
-    print_scatter_plot(ports_stream_df, csv_file)"""
+    print_scatter_plot(ports_stream_df, csv_file)
 
     # get calibration mean
-    calibration_mean = get_calibration_mean(ports_stream_df)
+    calibration_mean_df = get_calibration_mean_df(ports_stream_df)
+    calibration_mean = get_calibration_mean(ports_stream)
 
     print(ports_stream_analytics)
     print(ports_stream_df.shape)
-    print(calibration_mean)
-    print(calibration_mean.shape)
+    print(calibration_mean_df.shape)
+    print("____________________")
+
+    print(type(ports_stream_df.values))
+

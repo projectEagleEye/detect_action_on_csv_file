@@ -8,6 +8,7 @@
 # import required files and libraries
 import csv
 import numpy as np
+import csv_analytics
 
 
 def get_processed_data(csv_file,
@@ -97,7 +98,7 @@ def process_data(raw_data,
                 if np.isfinite(float(each_row[sensor_col])):
                     temp_list += [float(each_row[sensor_col])]
                 else:
-                    temp_list += [float(0)]
+                    temp_list += [float(csv_analytics.default_mean)]
             # appends "temp_list" to numpy array
             processed_data = np.append(processed_data, [temp_list], axis=0)
 
