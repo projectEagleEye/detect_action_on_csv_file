@@ -16,9 +16,9 @@ default_mean = 847.23
 
 def get_calibration_mean(ports_stream, use_default_mean=False):
     """
-    function for calibration that finds the mean of the of the dataframe to be used by the classify action
+    function for calibration that finds the mean of the of the numpy array to be used by the classify action
     function as a base reference value
-    :param ports_stream_df: PANDAS DATAFRAME
+    :param ports_stream: NUMPY 2D ARRAY
     :param use_default_mean: BOOLEAN - use default calibration mean (default=842.6)
     :return: NUMPY FLOAT ARRAY - size of number of columns (ports) in the dataframe
     """

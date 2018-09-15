@@ -63,7 +63,7 @@ def get_signal_3d_tensor(ports_stream,
 
     # instantiate a rolling FIFO numpy array to extract signal vectora once all values of in a column is greater or
     # less than calibration_mean +- voltage_interval, respectively. The shape of the array is (time_interval, num_cols)
-    rolling_fifo = np.full((time_interval, num_cols), calibration_mean)
+    rolling_fifo = np.zeros((time_interval, num_cols))
 
     # iterate through each row of the data to extract the signal matrix
     for row in ports_stream:
@@ -71,6 +71,7 @@ def get_signal_3d_tensor(ports_stream,
             skip_check -= 1
 
         row_keep_dims = row.reshape((1, num_cols))
+        row_keep_dims = np.subtract(row_keep_dims, calibration_mean)
 
         rolling_fifo = np.delete(rolling_fifo, 0, 0)
         rolling_fifo = np.append(rolling_fifo, row_keep_dims, axis=0)
@@ -81,16 +82,16 @@ def get_signal_3d_tensor(ports_stream,
             for i in range(rolling_fifo.shape[1]):
                 col_keep_dims = rolling_fifo.T[i].reshape((time_interval, 1))
                 if (is_filled_by_signal is False) and (is_iterate is True):
-                    if (np.all(col_keep_dims > (calibration_mean + voltage_interval[i])) or
-                            np.all(col_keep_dims < (calibration_mean - voltage_interval[i]))):
+                    if (np.all(col_keep_dims > voltage_interval[i]) or
+                            np.all(col_keep_dims < np.multiply(voltage_interval[i], -1))):
                         skip_check = time_interval
                         is_filled_by_signal = True
                         is_iterate = False
 
             # checks if all values of all columns of the rolling_fifo is filled by mean
             if (is_filled_by_signal is True) and (is_iterate is True):
-                if (np.all(rolling_fifo < (calibration_mean + voltage_interval)) and
-                        np.all(rolling_fifo > (calibration_mean - voltage_interval))):
+                if (np.all(rolling_fifo < voltage_interval) and
+                        np.all(rolling_fifo > np.multiply(voltage_interval, -1))):
                     skip_check = time_interval
                     is_filled_by_signal = False
                     is_iterate = False
@@ -164,7 +165,7 @@ def get_reference_matrix(ports_stream,
     # initialize temporary 3d tensor to hold all signal matrices after zero padding
     temp_signal_3d_tensor = np.zeros((max_rows, num_cols, 0))
     for signal_matrix in signal_3d_tensor:
-        # resize signal vectors by adding 0s
+        # resize signal matrices by adding 0s
         num_padding = max_rows - signal_matrix.shape[0]
         signal_matrix = np.pad(signal_matrix, ((0, num_padding), (0, 0)), "constant", constant_values=padding_value)
 
@@ -341,7 +342,7 @@ if __name__ == "__main__":
 
     # TEST: get_projection_classification()
     print("TEST: get_projection_classification()")
-    csv_file = "Blinks1.csv"
+    csv_file = "Blinks30.csv"
     ports_stream = csv_reader.get_processed_data(csv_file)
     calibration_mean = csv_analytics.get_calibration_mean(ports_stream)
     signal_3d_tensor = get_signal_3d_tensor(ports_stream,
@@ -359,15 +360,16 @@ if __name__ == "__main__":
     print("____________________________")
 
     # TEST: save_to_file()
-    print("TEST: save_to_file()")
+    """print("TEST: save_to_file()")
     save_to_file(reference_matrix, "blink", "_ref")
     save_to_file(reference_matrix_magnitude, "blink", "_mag")
-    print("____________________________")
+    print("____________________________")"""
 
     # TEST: read_from_file()
-    print("TEST: read_from_file()")
+    """print("TEST: read_from_file()")
     reference = read_from_file(["blink"], "_ref")
     print(reference)
     magnitude = read_from_file(["blink"], "_mag")
     print(magnitude)
-    print("____________________________")
+    print("____________________________")"""
+
