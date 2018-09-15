@@ -6,36 +6,69 @@
 """
 
 # import necessary libraries and files
+import csv_reader
 import numpy as np
 from numpy.core.umath_tests import inner1d
 import csv_analytics
 import os
 
 
-def get_action(ports_stream, use_default_mean=False):
+def get_action(csv_file,
+               action_name_array,
+               data_type=" Person0/eeg",
+               time_interval=12,
+               voltage_interval=(80, 20, 25, 80),
+               classification_threshold=5):
     """
-    function that takes in "ports_stream" parameter to classify a body action based on the data
-    stream
-    :param ports_stream: NUMPY 2D ARRAY
-    :param use_default_mean: BOOLEAN - (default=False)
-    :return: STRING - classified action in a numpy list
+    function that returns a list of performed actions based on eeg data from a csv file
+    :param csv_file: STRING - file path directory
+    :param action_name_array: STRING LIST - list of body actions defined by the reference_matrix in each file
+    :param data_type: STRING - name of the type of csv data to collect (default=" Person0/eeg")
+    :param time_interval: INT - the interval the signal holds above or below the voltage-interval on the
+    calibration_mean to begin or end recording of the signal vector (default=12)
+    :param voltage_interval: INT LIST - the interval above or below the calibration_mean which triggers recording
+    of the signal vector when breached (for each signal port) (default=(80, 20, 25, 80)
+    :param classification_threshold: FLOAT - projection scalars greater than this value will be indexed as -1 (not an
+    action) (default=5)
+    :return: STRING LIST - predicted actions that were performed based on eeg data
     """
+    # convert data from csv file to a numpy array
+    ports_stream = csv_reader.get_processed_data(csv_file,
+                                                 sensor_cols=(2, 3, 4, 5),
+                                                 data_type_col=1,
+                                                 data_type=data_type,
+                                                 transposition=False)
+    # get calibration_mean
+    calibration_mean = csv_analytics.get_calibration_mean(ports_stream)
+    # filter out signal values from ports_stream by calling the get_signal_3d_tensor function
+    signal_3d_tensor = get_signal_3d_tensor(ports_stream,
+                                            calibration_mean,
+                                            time_interval,
+                                            voltage_interval)
+    # read in reference vectors and their magnitudes
+    reference_3d_tensor = read_from_file(action_name_array,
+                                         footer='_ref',
+                                         file_type=".csv",
+                                         path=r"/ref_matrices/")
+    reference_3d_tensor_magnitude = read_from_file(action_name_array,
+                                                   footer='_mag',
+                                                   file_type=".csv",
+                                                   path=r"/ref_matrices/")
+    # classify action by calling the get_projection_classification function
+    classificaton_index = get_projection_classification(signal_3d_tensor,
+                                                        reference_3d_tensor,
+                                                        reference_3d_tensor_magnitude,
+                                                        classification_threshold)
 
-    # get mean value as base reference value for calibration
-    calibration_mean = csv_analytics.get_calibration_mean(ports_stream, use_default_mean)
+    # return a string list of classified actions from classification_index
+    classificaton_string = []
+    for index in classificaton_index:
+        if index == -1:
+            classificaton_string += ["detected something, but no reference action given"]
+        else:
+            classificaton_string += [action_name_array[index] + " detected"]
 
-    # initiate counter numpy array for return
-    counter = 0
-    detected_action_arr = np.zeros((0, 2))
-
-    # iterate through "port_stream" parameter to classify body action
-    for value in ports_stream:
-        counter += 1
-        # TODO: write classification logic using the method of least squares from linear algebra
-        if np.any(value > 1100):
-            detected_action_arr = np.append(detected_action_arr, [[counter, "Blink detected"]], axis=0)
-
-    return detected_action_arr
+    return classificaton_string
 
 
 def get_signal_3d_tensor(ports_stream,
@@ -191,7 +224,7 @@ def get_reference_matrix_magnitude(reference_matrix):
 def get_projection_classification(signal_3d_tensor,
                                   reference_3d_tensor,
                                   reference_3d_tensor_magnitude,
-                                  classification_threshold):
+                                  classification_threshold=5):
     """
     function that take each batch of signal vectors and compare to each batch of reference vectors by projection. The
     projection action with the highest value indicates highest similarity with the reference action
@@ -199,7 +232,7 @@ def get_projection_classification(signal_3d_tensor,
     :param reference_3d_tensor: LIST OF NUMPY 2D ARRAY - shape=(vector_length, num_ports, num_actions)
     :param reference_3d_tensor_magnitude: NUMPY 1D ARRAY - shape(num_actions, num_ports)
     :param classification_threshold: FLOAT - projection scalars greater than this value will be indexed as -1 (not an
-    action)
+    action) (default=5)
     :return: NUMPY 1D ARRAY - index into which action reference vector the scalar projection value was the highest
     """
     # instantiate variables
@@ -211,9 +244,9 @@ def get_projection_classification(signal_3d_tensor,
         projection_array = []
         for i in range(len(reference_3d_tensor)):
             # 0-pad matrix to reach equal number of rows
-            num_padding = abs(signal_matrix.shape[0] - reference_matrix.shape[0])
+            num_padding = abs(signal_matrix.shape[0] - reference_3d_tensor[i].shape[0])
             temp_signal_matrix = signal_matrix
-            temp_reference_matrix = reference_matrix
+            temp_reference_matrix = reference_3d_tensor[i]
             if signal_matrix.shape[0] < reference_3d_tensor[i].shape[0]:
                 temp_signal_matrix = np.pad(signal_matrix,
                                             ((0, num_padding), (0, 0)),
@@ -226,7 +259,7 @@ def get_projection_classification(signal_3d_tensor,
                                                constant_values=0)
 
             # extract the scalar when projecting signal_matrix onto reference_matrix
-            temp_element = inner1d(temp_signal_matrix.T, temp_reference_matrix.T)  # dot product
+            temp_element = inner1d(temp_signal_matrix.T, temp_reference_matrix.T).reshape((1, num_cols))  # dot product
             temp_element = np.divide(temp_element, np.square(reference_3d_tensor_magnitude[i]))
             temp_element = np.sum(temp_element, axis=1)
             temp_element = np.subtract(temp_element, num_cols)
@@ -279,8 +312,8 @@ def read_from_file(action_name_array,
                    path=r"/ref_matrices/"):
     """
     function that reads reference_matrix from text file
-    :param file_name_array: STRING LIST
     :param action_name_array: STRING LIST - list of body actions defined by the reference_matrix in each file
+    :param footer: STRING - (ie. "_ref" or "_mag")
     :param file_type: STRING - (default=".csv")
     :param path: STRING - read path (default="/ref_matrix/")
     :return: NUMPY ARRAY
@@ -300,10 +333,8 @@ def read_from_file(action_name_array,
 # CODE TESTING
 if __name__ == "__main__":
     # EXECUTION DURATION
-    import time
+    """import time
     start_time = time.time()
-
-    import csv_reader
 
     csv_file = "Blinks30.csv"
     ports_stream = csv_reader.get_processed_data(csv_file)
@@ -342,7 +373,7 @@ if __name__ == "__main__":
 
     # TEST: get_projection_classification()
     print("TEST: get_projection_classification()")
-    csv_file = "Blinks30.csv"
+    csv_file = "Blinks1.csv"
     ports_stream = csv_reader.get_processed_data(csv_file)
     calibration_mean = csv_analytics.get_calibration_mean(ports_stream)
     signal_3d_tensor = get_signal_3d_tensor(ports_stream,
@@ -357,7 +388,7 @@ if __name__ == "__main__":
                                                         classificaton_threshold)
     print(classificaton_index)
     print(len(classificaton_index))
-    print("____________________________")
+    print("____________________________")"""
 
     # TEST: save_to_file()
     """print("TEST: save_to_file()")
@@ -373,3 +404,13 @@ if __name__ == "__main__":
     print(magnitude)
     print("____________________________")"""
 
+    # __________________________________________________________________________________________________________________
+    # __________________________________________________________________________________________________________________
+    # __________________________________________________________________________________________________________________
+
+    # TEST: get_action()
+    csv_file = "Blinks1.csv"
+    action_name_array = ["blink"]
+    classificaton_string = get_action(csv_file, action_name_array)
+    for element in classificaton_string:
+        print(element)
