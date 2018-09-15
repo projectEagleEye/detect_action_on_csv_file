@@ -9,6 +9,7 @@
 import numpy as np
 from numpy.core.umath_tests import inner1d
 import csv_analytics
+import os
 
 
 def get_action(ports_stream, use_default_mean=False):
@@ -244,25 +245,55 @@ def get_projection_classification(signal_3d_tensor,
     return classificaton_index
 
 
-def save_reference_matrix_to_txt(reference_matrix, action_name, path="/ref_matrix"):
+def save_to_file(data,
+                 action_name,
+                 footer,
+                 file_type=".csv",
+                 path=r"/ref_matrices/"):
     """
     function that saves reference_matrix to a text file
-    :param reference_matrix: NUMPY 2D ARRAY
+    :param data: NUMPY 2D ARRAY
     :param action_name: STRING - the body action defined by the reference_matrix
-    :param path: STRING - save path (default="/ref_matrix")
+    :param footer: STRING - (ie. "_ref" or "_mag")
+    :param file_type: STRING - (default=".csv")
+    :param path: STRING - save path (default="/ref_matrices/")
     :return: BOOLEAN - whether if save is successful
     """
-    # TODO: save_reference_matrix_to_txt() - use np.savetxt()
+    try:
+        file_name = action_name + footer
+        directory = os.path.dirname(__file__)
+        directory += path + file_name + file_type
+        np.savetxt(directory, data, delimiter=',')
+        print("Saved", file_name + file_type, "sucessfully")
+        return True
+
+    except:
+        print("ERROR: Can't Save!")
+        return False
 
 
-def read_reference_matrix_from_txt(file_name, path="/ref_matrix"):
+def read_from_file(action_name_array,
+                   footer,
+                   file_type=".csv",
+                   path=r"/ref_matrices/"):
     """
     function that reads reference_matrix from text file
-    :param file_name: STRING
-    :param path: STRING - read path (default="/ref_matrix")
+    :param file_name_array: STRING LIST
+    :param action_name_array: STRING LIST - list of body actions defined by the reference_matrix in each file
+    :param file_type: STRING - (default=".csv")
+    :param path: STRING - read path (default="/ref_matrix/")
     :return: NUMPY ARRAY
     """
-    # TODO: read_reference_matrix_from_txt() - use np.loadtxt()
+    data = []
+
+    for action_name in action_name_array:
+        file_name = action_name + footer
+        directory = os.path.dirname(__file__)
+        directory += path + file_name + file_type
+        temp_element = np.loadtxt(directory, delimiter=',')
+        data += [temp_element]
+
+    return data
 
 
 # CODE TESTING
@@ -327,14 +358,16 @@ if __name__ == "__main__":
     print(len(classificaton_index))
     print("____________________________")
 
-    # TEST: save_reference_matrix_to_txt()
-    print("TEST: save_reference_matrix_to_txt()")
-    reference_matrix_magnitude = get_reference_matrix_magnitude(reference_matrix)
-    print(reference_matrix_magnitude)
+    # TEST: save_to_file()
+    print("TEST: save_to_file()")
+    save_to_file(reference_matrix, "blink", "_ref")
+    save_to_file(reference_matrix_magnitude, "blink", "_mag")
     print("____________________________")
 
-    # TEST: read_reference_matrix_from_txt()
-    print("TEST: read_reference_matrix_from_txt()")
-    reference_matrix_magnitude = get_reference_matrix_magnitude(reference_matrix)
-    print(reference_matrix_magnitude)
+    # TEST: read_from_file()
+    print("TEST: read_from_file()")
+    reference = read_from_file(["blink"], "_ref")
+    print(reference)
+    magnitude = read_from_file(["blink"], "_mag")
+    print(magnitude)
     print("____________________________")
