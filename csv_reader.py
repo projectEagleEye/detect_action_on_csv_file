@@ -12,31 +12,19 @@ import csv_analytics
 
 
 def get_processed_data(csv_file,
-                       sensor_cols,
-                       data_type_col,
-                       data_type,
+                       sensor_cols=(2, 3, 4, 5),
+                       data_type_col=1,
+                       data_type=" Person0/eeg",
                        transposition=False):
     """
     main function that returns processed data from csv
     :param csv_file: STRING - file path directory
-    :param sensor_cols: INT LIST - integer index of sensor columns in csv file
-    :param data_type_col: INT - integer index of "data_type"
-    :param data_type: STRING - name of the type of csv data to collect (eg. "Person0/eeg"
+    :param sensor_cols: INT ARRAY - integer index of sensor columns in csv file (default=((2, 3, 4, 5)))
+    :param data_type_col: INT - integer index of "data_type" (default=1)
+    :param data_type: STRING - name of the type of csv data to collect (default=" Person0/eeg")
     :param transposition: BOOLEAN - transpose the csv data output 2D numpy array (default=False)
     :return: NUMPY FLOAT ARRAY - processed data
     """
-    # perform error checking on parameters
-    try:
-        assert isinstance(csv_file, str)
-        assert isinstance(sensor_cols, list)
-        assert isinstance(data_type_col, int)
-        assert isinstance(data_type, str)
-        assert isinstance(transposition, bool)
-    except AssertionError:
-        print("ERROR - get_processed_data(csv_file, sensor_cols, data_type_col, data_type, transposition=True): Check "
-              "input parameter type!")
-        return None
-
     # get raw and processed data from csv file
     raw_data = get_raw_data(csv_file)
     return process_data(raw_data,
@@ -66,10 +54,10 @@ def get_raw_data(csv_file):
 
 
 def process_data(raw_data,
-                 sensor_cols,
-                 data_type_col,
-                 data_type,
-                 transposition):
+                 sensor_cols=(2, 3, 4, 5),
+                 data_type_col=1,
+                 data_type=" Person0/eeg",
+                 transposition=False):
     """
     function that cleans up "raw_data" by:
     1) extract string values at each "sensor_cols"
@@ -77,9 +65,9 @@ def process_data(raw_data,
     3) input to a numpy array
     4) transpose numpy array
     :param raw_data: STRING 2-D LIST - raw csv data
-    :param sensor_cols: INT ARRAY - integer index of sensor columns in csv file
-    :param data_type_col: INT - integer index of "data_type"
-    :param data_type: STRING - name of the type of csv data to collect (eg. " Person0/eeg"
+    :param sensor_cols: INT ARRAY - integer index of sensor columns in csv file (default=((2, 3, 4, 5)))
+    :param data_type_col: INT - integer index of "data_type" (default=1)
+    :param data_type: STRING - name of the type of csv data to collect (default=" Person0/eeg")
     :param transposition: BOOLEAN - transpose the csv data output 2D numpy array (default=False)
     :return: NUMPY FLOAT ARRAY - processed data
     """
@@ -118,11 +106,12 @@ if __name__ == '__main__':
     data_type = " Person0/eeg"
     transposition = False
     raw_data = get_raw_data(csv_file)
-    processed_data = get_processed_data(csv_file,
+    """processed_data = get_processed_data(csv_file,
                                         sensor_cols,
                                         data_type_col,
                                         data_type,
-                                        transposition)
+                                        transposition)"""
+    processed_data = get_processed_data(csv_file)
     print(raw_data)
     print("______________________")
     print(processed_data)

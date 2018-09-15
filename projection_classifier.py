@@ -11,11 +11,12 @@ from numpy.core.umath_tests import inner1d
 import csv_analytics
 
 
-def get_action(ports_stream, use_default_mean):
+def get_action(ports_stream, use_default_mean=False):
     """
     function that takes in "ports_stream" parameter to classify a body action based on the data
     stream
     :param ports_stream: NUMPY 2D ARRAY
+    :param use_default_mean: BOOLEAN - (default=False)
     :return: STRING - classified action in a numpy list
     """
 
@@ -38,16 +39,16 @@ def get_action(ports_stream, use_default_mean):
 
 def get_signal_3d_tensor(ports_stream,
                          calibration_mean,
-                         time_interval,
-                         voltage_interval):
+                         time_interval=12,
+                         voltage_interval=(80, 20, 25, 80)):
     """
     function that output signal vectors for each port found from the "ports_stream_df"
     :param ports_stream: NUMPY 2D ARRAY
     :param calibration_mean: NUMPY 1D FLOAT ARRAY
     :param time_interval: INT - the interval the signal holds above or below the voltage-interval on the
-    calibration_mean to begin or end recording of the signal vector
-    :param voltage_interval: BOOLEAN LIST - the interval above or below the calibration_mean which triggers recording
-    of the signal vector when breached (for each signal port)
+    calibration_mean to begin or end recording of the signal vector (default=12)
+    :param voltage_interval: INT LIST - the interval above or below the calibration_mean which triggers recording
+    of the signal vector when breached (for each signal port) (default=(80, 20, 25, 80)
     :return: LIST OF NUMPY 2D ARRAY - contains the signal vectors for each port as a list of 2D numpy arrays
     """
 
@@ -128,18 +129,25 @@ def get_signal_3d_tensor(ports_stream,
 
 def get_reference_matrix(ports_stream,
                          calibration_mean,
-                         time_interval,
-                         voltage_interval):
+                         time_interval=12,
+                         voltage_interval=(80, 20, 25, 80),
+                         isNan=False):
     """
     function that output reference vectors for a body action
     :param ports_stream: NUMPY 2D ARRAY - contain multiple repeated signal vectors of the desired body action
     :param calibration_mean: NUMPY 1D FLOAT ARRAY
     :param time_interval: INT - the interval the signal holds above or below the voltage-interval on the
-    calibration_mean to begin or end recording of the signal vector
-    :param voltage_interval: INT - the interval above or below the calibration_mean which triggers recording of the signal
-    vector when breached
+    calibration_mean to begin or end recording of the signal vector (default=12)
+    :param voltage_interval: INT LIST - the interval above or below the calibration_mean which triggers recording
+    of the signal vector when breached (for each signal port) (default=(80, 20, 25, 80)
+    :param isNan: BOOLEAN - when False, use 0 for padding; when True, use np.nan for padding (default=False)
     :return: NUMPY 2D ARRAY - signal vectors for each port
     """
+    # padding value
+    padding_value = 0
+    if isNan:
+        padding_value = np.nan
+
     # get the number of rows and columns from the dataset
     num_cols = ports_stream.shape[1]
 
@@ -157,7 +165,7 @@ def get_reference_matrix(ports_stream,
     for signal_matrix in signal_3d_tensor:
         # resize signal vectors by adding 0s
         num_padding = max_rows - signal_matrix.shape[0]
-        signal_matrix = np.pad(signal_matrix, ((0, num_padding), (0, 0)), "constant", constant_values=np.nan)
+        signal_matrix = np.pad(signal_matrix, ((0, num_padding), (0, 0)), "constant", constant_values=padding_value)
 
         temp_signal_3d_tensor = np.dstack((temp_signal_3d_tensor, signal_matrix))
 
@@ -178,16 +186,20 @@ def get_reference_matrix_magnitude(reference_matrix):
     return reference_matrix_magnitude.reshape(1, reference_matrix.shape[1])
 
 
-def get_projection_classification(signal_3d_tensor, reference_3d_tensor, reference_3d_tensor_magnitude):
+def get_projection_classification(signal_3d_tensor,
+                                  reference_3d_tensor,
+                                  reference_3d_tensor_magnitude,
+                                  classification_threshold):
     """
     function that take each batch of signal vectors and compare to each batch of reference vectors by projection. The
     projection action with the highest value indicates highest similarity with the reference action
     :param signal_3d_tensor: LIST OF NUMPY 2D ARRAY - shape=(vector_length, num_ports, num_vectors)
     :param reference_3d_tensor: LIST OF NUMPY 2D ARRAY - shape=(vector_length, num_ports, num_actions)
     :param reference_3d_tensor_magnitude: NUMPY 1D ARRAY - shape(num_actions, num_ports)
+    :param classification_threshold: FLOAT - projection scalars greater than this value will be indexed as -1 (not an
+    action)
     :return: NUMPY 1D ARRAY - index into which action reference vector the scalar projection value was the highest
     """
-    # TODO: get_projection_classification()
     # instantiate variables
     num_cols = signal_3d_tensor[0].shape[1]
     projection_matrix = np.zeros((0, len(reference_3d_tensor)))
@@ -198,22 +210,36 @@ def get_projection_classification(signal_3d_tensor, reference_3d_tensor, referen
         for i in range(len(reference_3d_tensor)):
             # 0-pad matrix to reach equal number of rows
             num_padding = abs(signal_matrix.shape[0] - reference_matrix.shape[0])
+            temp_signal_matrix = signal_matrix
+            temp_reference_matrix = reference_matrix
             if signal_matrix.shape[0] < reference_3d_tensor[i].shape[0]:
-                temp_signal_matrix = np.pad(signal_matrix, ((0, num_padding), (0, 0)), "constant", constant_values=0)
+                temp_signal_matrix = np.pad(signal_matrix,
+                                            ((0, num_padding), (0, 0)),
+                                            "constant",
+                                            constant_values=0)
             elif signal_matrix.shape[0] > reference_3d_tensor[i].shape[0]:
-                temp_reference_matrix = np.pad(reference_3d_tensor[i], ((0, num_padding), (0, 0)), "constant", constant_values=0)
+                temp_reference_matrix = np.pad(reference_3d_tensor[i],
+                                               ((0, num_padding), (0, 0)),
+                                               "constant",
+                                               constant_values=0)
 
             # extract the scalar when projecting signal_matrix onto reference_matrix
-            temp_element = inner1d(signal_matrix.T, signal_matrix.T)  # dot product
+            temp_element = inner1d(temp_signal_matrix.T, temp_reference_matrix.T)  # dot product
             temp_element = np.divide(temp_element, np.square(reference_3d_tensor_magnitude[i]))
             temp_element = np.sum(temp_element, axis=1)
             temp_element = np.subtract(temp_element, num_cols)
             temp_element = np.abs(temp_element)
-            projection_array += temp_element
+            projection_array += [temp_element]
         projection_matrix = np.append(projection_matrix, projection_array, axis=0)
 
     # determine reference_3d_tensor index for classify action
     classificaton_index = np.argmin(projection_matrix, axis=1)
+
+    # projection threshold adjustment
+    min_array = np.min(projection_matrix, axis=1)
+    for i in range(len(min_array)):
+        if min_array[i] > classification_threshold:
+            classificaton_index[i] = -1
     
     return classificaton_index
 
@@ -248,22 +274,17 @@ if __name__ == "__main__":
     import csv_reader
 
     csv_file = "Blinks30.csv"
-    sensor_cols = [2, 3, 4, 5]
-    data_type_col = 1
-    data_type = " Person0/eeg"
-    transposition = False
-    ports_stream = csv_reader.get_processed_data(csv_file,
-                                                 sensor_cols,
-                                                 data_type_col,
-                                                 data_type,
-                                                 transposition)
+    ports_stream = csv_reader.get_processed_data(csv_file)
     calibration_mean = csv_analytics.get_calibration_mean(ports_stream)
     time_interval = 12
     voltage_interval = [80, 20, 25, 80]
 
     # TEST: get_signal_3d_tensor()
     print("TEST: get_signal_3d_tensor()")
-    signal_3d_tensor = get_signal_3d_tensor(ports_stream, calibration_mean, time_interval, voltage_interval)
+    signal_3d_tensor = get_signal_3d_tensor(ports_stream,
+                                            calibration_mean,
+                                            time_interval,
+                                            voltage_interval)
     # print(signal_3d_tensor)
     for i in range(len(signal_3d_tensor)):
         print(signal_3d_tensor[i].shape)
@@ -273,16 +294,47 @@ if __name__ == "__main__":
 
     # TEST: get_reference_matrix()
     print("TEST: get_reference_matrix()")
-    reference_matrix = get_reference_matrix(ports_stream, calibration_mean, time_interval, voltage_interval)
+    reference_matrix = get_reference_matrix(ports_stream,
+                                            calibration_mean,
+                                            time_interval,
+                                            voltage_interval)
     # print(reference_matrix)
     print(reference_matrix.shape)
     print("____________________________")
 
     # TEST: get_reference_matrix_magnitude()
+    print("TEST: get_reference_matrix_magnitude()")
     reference_matrix_magnitude = get_reference_matrix_magnitude(reference_matrix)
     print(reference_matrix_magnitude)
+    print("____________________________")
 
     # TEST: get_projection_classification()
-    """print("TEST: get_projection_classification()")
-    reference_3d_tensor = [reference_matrix]
-    print("____________________________")"""
+    print("TEST: get_projection_classification()")
+    csv_file = "Blinks1.csv"
+    ports_stream = csv_reader.get_processed_data(csv_file)
+    calibration_mean = csv_analytics.get_calibration_mean(ports_stream)
+    signal_3d_tensor = get_signal_3d_tensor(ports_stream,
+                                            calibration_mean,
+                                            time_interval,
+                                            voltage_interval)
+    classificaton_threshold = 2.5
+
+    classificaton_index = get_projection_classification(signal_3d_tensor,
+                                                        [reference_matrix],
+                                                        [reference_matrix_magnitude],
+                                                        classificaton_threshold)
+    print(classificaton_index)
+    print(len(classificaton_index))
+    print("____________________________")
+
+    # TEST: save_reference_matrix_to_txt()
+    print("TEST: save_reference_matrix_to_txt()")
+    reference_matrix_magnitude = get_reference_matrix_magnitude(reference_matrix)
+    print(reference_matrix_magnitude)
+    print("____________________________")
+
+    # TEST: read_reference_matrix_from_txt()
+    print("TEST: read_reference_matrix_from_txt()")
+    reference_matrix_magnitude = get_reference_matrix_magnitude(reference_matrix)
+    print(reference_matrix_magnitude)
+    print("____________________________")
