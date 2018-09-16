@@ -71,6 +71,67 @@ def get_action(csv_file,
     return classificaton_string
 
 
+def save_action(csv_file,
+                action_name,
+                data_type=" Person0/eeg",
+                time_interval=12,
+                voltage_interval=(80, 20, 25, 80),
+                isNan=False):
+    """
+    function that saves a reference matrix and its magnitude to separate files based on the specified action from the
+    eeg data
+    :param csv_file: STRING - file path directory
+    :param action_name: STRING - the body action defined by the reference_matrix
+    :param data_type: STRING - name of the type of csv data to collect (default=" Person0/eeg")
+    :param time_interval: INT - the interval the signal holds above or below the voltage-interval on the
+    calibration_mean to begin or end recording of the signal vector (default=12)
+    :param voltage_interval: INT LIST - the interval above or below the calibration_mean which triggers recording
+    of the signal vector when breached (for each signal port) (default=(80, 20, 25, 80)
+    :param isNan: BOOLEAN - when False, use 0 for padding; when True, use np.nan for padding (default=False)
+    :return: BOOLEAN - whether if saved successfully
+    """
+
+    # convert data from csv file to a numpy array
+    ports_stream = csv_reader.get_processed_data(csv_file,
+                                                 sensor_cols=(2, 3, 4, 5),
+                                                 data_type_col=1,
+                                                 data_type=data_type,
+                                                 transposition=False)
+    # get calibration_mean
+    calibration_mean = csv_analytics.get_calibration_mean(ports_stream)
+    # get the reference matrix and its magnitude from the eeg data
+    reference_matrix = get_reference_matrix(ports_stream,
+                                            calibration_mean,
+                                            time_interval,
+                                            voltage_interval,
+                                            isNan)
+    reference_matrix_magnitude = get_reference_matrix_magnitude(reference_matrix)
+    # save reference matrix and its magnitude separately to file
+    is_saved_ref = save_to_file(reference_matrix,
+                                action_name,
+                                footer='_ref',
+                                file_type=".csv",
+                                path=r"/ref_matrices/")
+    is_saved_mag = save_to_file(reference_matrix_magnitude,
+                                action_name,
+                                footer='_mag',
+                                file_type=".csv",
+                                path=r"/ref_matrices/")
+
+    if is_saved_ref and is_saved_mag:
+        print("saved", action_name, "to files successfully")
+        return True
+    elif not is_saved_ref and is_saved_mag:
+        print("FAILED: only saved", action_name, "to _mag file")
+        return False
+    elif is_saved_ref and not is_saved_mag:
+        print("FAILED: only saved", action_name, "to _ref file")
+        return False
+    else:
+        print("FAILED: no files were saved")
+        return False
+
+
 def get_signal_3d_tensor(ports_stream,
                          calibration_mean,
                          time_interval=12,
@@ -153,11 +214,8 @@ def get_signal_3d_tensor(ports_stream,
             temp_signal_matrix = np.append(temp_signal_matrix, rolling_fifo_last_row, axis=0)
 
         # iterate through rows in ports_stream without copying
-        elif (is_filled_by_signal is False) and (is_iterate is True):
-            continue
-
         else:
-            print("Error in get_signal_3d_tensor")
+            continue
 
     return signal_3d_tensor
 
@@ -298,11 +356,9 @@ def save_to_file(data,
         directory = os.path.dirname(__file__)
         directory += path + file_name + file_type
         np.savetxt(directory, data, delimiter=',')
-        print("Saved", file_name + file_type, "sucessfully")
         return True
 
     except:
-        print("ERROR: Can't Save!")
         return False
 
 
@@ -414,3 +470,8 @@ if __name__ == "__main__":
     classificaton_string = get_action(csv_file, action_name_array)
     for element in classificaton_string:
         print(element)
+
+    # TEST: save_action()
+    """csv_file = "Blinks30.csv"
+    action_name = "blink"
+    save_action(csv_file, action_name)"""
