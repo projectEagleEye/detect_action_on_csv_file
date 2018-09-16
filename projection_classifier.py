@@ -76,7 +76,7 @@ def save_action(csv_file,
                 data_type=" Person0/eeg",
                 time_interval=12,
                 voltage_interval=(80, 20, 25, 80),
-                isNan=False):
+                is_nan=False):
     """
     function that saves a reference matrix and its magnitude to separate files based on the specified action from the
     eeg data
@@ -87,7 +87,7 @@ def save_action(csv_file,
     calibration_mean to begin or end recording of the signal vector (default=12)
     :param voltage_interval: INT LIST - the interval above or below the calibration_mean which triggers recording
     of the signal vector when breached (for each signal port) (default=(80, 20, 25, 80)
-    :param isNan: BOOLEAN - when False, use 0 for padding; when True, use np.nan for padding (default=False)
+    :param is_nan: BOOLEAN - when False, use 0 for padding; when True, use np.nan for padding (default=False)
     :return: BOOLEAN - whether if saved successfully
     """
 
@@ -104,7 +104,7 @@ def save_action(csv_file,
                                             calibration_mean,
                                             time_interval,
                                             voltage_interval,
-                                            isNan)
+                                            is_nan)
     reference_matrix_magnitude = get_reference_matrix_magnitude(reference_matrix)
     # save reference matrix and its magnitude separately to file
     is_saved_ref = save_to_file(reference_matrix,
@@ -224,7 +224,7 @@ def get_reference_matrix(ports_stream,
                          calibration_mean,
                          time_interval=12,
                          voltage_interval=(80, 20, 25, 80),
-                         isNan=False):
+                         is_nan=False):
     """
     function that output reference vectors for a body action
     :param ports_stream: NUMPY 2D ARRAY - contain multiple repeated signal vectors of the desired body action
@@ -233,12 +233,12 @@ def get_reference_matrix(ports_stream,
     calibration_mean to begin or end recording of the signal vector (default=12)
     :param voltage_interval: INT LIST - the interval above or below the calibration_mean which triggers recording
     of the signal vector when breached (for each signal port) (default=(80, 20, 25, 80)
-    :param isNan: BOOLEAN - when False, use 0 for padding; when True, use np.nan for padding (default=False)
+    :param is_nan: BOOLEAN - when False, use 0 for padding; when True, use np.nan for padding (default=False)
     :return: NUMPY 2D ARRAY - signal vectors for each port
     """
     # padding value
     padding_value = 0
-    if isNan:
+    if is_nan:
         padding_value = np.nan
 
     # get the number of rows and columns from the dataset
@@ -295,7 +295,8 @@ def get_projection_classification(signal_3d_tensor,
     """
     # instantiate variables
     num_cols = signal_3d_tensor[0].shape[1]
-    projection_matrix = np.zeros((0, len(reference_3d_tensor)))
+    num_ref = len(reference_3d_tensor)
+    projection_matrix = np.zeros((0, num_ref))
 
     # iterate through signal_3d_tensor for projection
     for signal_matrix in signal_3d_tensor:
@@ -323,6 +324,7 @@ def get_projection_classification(signal_3d_tensor,
             temp_element = np.subtract(temp_element, num_cols)
             temp_element = np.abs(temp_element)
             projection_array += [temp_element]
+        projection_array = np.array(projection_array).reshape((1, num_ref))
         projection_matrix = np.append(projection_matrix, projection_array, axis=0)
 
     # determine reference_3d_tensor index for classify action
@@ -464,14 +466,48 @@ if __name__ == "__main__":
     # __________________________________________________________________________________________________________________
     # __________________________________________________________________________________________________________________
 
+    # TEST: save_action()
+    data_type = " Person0/notch_filtered_eeg"
+    time_interval = 12
+    voltage_interval = (30, 20, 25, 40)
+    is_nan = False
+    # save Blinks50.csv
+    """csv_file = "Blinks50.csv"
+    action_name = "blink"
+    save_action(csv_file,
+                action_name,
+                data_type,
+                time_interval,
+                voltage_interval,
+                is_nan)"""
+    # save eyeLookLeft30.csv
+    """csv_file = "eyeLookLeft30.csv"
+    action_name = "look left"
+    save_action(csv_file,
+                action_name,
+                data_type,
+                time_interval,
+                voltage_interval,
+                is_nan)"""
+    # save eyeLookLeft30.csv
+    """csv_file = "lookDown30.csv"
+    action_name = "look down"
+    save_action(csv_file,
+                action_name,
+                data_type,
+                time_interval,
+                voltage_interval,
+                is_nan)"""
+
     # TEST: get_action()
-    csv_file = "Blinks1.csv"
-    action_name_array = ["blink"]
-    classificaton_string = get_action(csv_file, action_name_array)
+    csv_file = "Blinks50.csv"
+    action_name_array = ["blink", "look left", "look down"]
+    classification_threshold = 3.5
+    classificaton_string = get_action(csv_file,
+                                      action_name_array,
+                                      data_type,
+                                      time_interval,
+                                      voltage_interval,
+                                      classification_threshold)
     for element in classificaton_string:
         print(element)
-
-    # TEST: save_action()
-    """csv_file = "Blinks30.csv"
-    action_name = "blink"
-    save_action(csv_file, action_name)"""

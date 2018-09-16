@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 import csv_reader
 
 # declare default mean for get_calibration functions
-default_mean = 847.23
+default_mean = 847.39
 
 def get_calibration_mean(ports_stream, use_default_mean=False):
     """
@@ -198,10 +198,10 @@ def get_dataframe(csv_file,
 # CODE TESTING
 if __name__ == "__main__":
     # get dataframe parameters
-    csv_file = "Blinks1.csv"
+    csv_file = "idle1.csv"
     sensor_cols = [2, 3, 4, 5]
     data_type_col = 1
-    data_type = " Person0/eeg"
+    data_type = " Person0/notch_filtered_eeg"
     transposition = False
     # get histogram parameters
     n_bins = 300
@@ -227,7 +227,7 @@ if __name__ == "__main__":
     # get analytics
     ports_stream_analytics = get_describe(ports_stream_df)
     # get histogram
-    print_histogram(ports_stream_df, csv_file)
+    # print_histogram(ports_stream_df, csv_file)
     # get scatter plot
     print_scatter_plot(ports_stream_df, csv_file)
 
