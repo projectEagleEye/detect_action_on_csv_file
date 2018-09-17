@@ -198,10 +198,10 @@ def get_dataframe(csv_file,
 # CODE TESTING
 if __name__ == "__main__":
     # get dataframe parameters
-    csv_file = "idle1.csv"
+    csv_file = "ref_data/LookUp30.csv"
     sensor_cols = [2, 3, 4, 5]
     data_type_col = 1
-    data_type = " Person0/notch_filtered_eeg"
+    data_type = " /muse/notch_filtered_eeg"
     transposition = False
     # get histogram parameters
     n_bins = 300

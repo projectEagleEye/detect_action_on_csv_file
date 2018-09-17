@@ -14,14 +14,14 @@ import csv_analytics
 def get_processed_data(csv_file,
                        sensor_cols=(2, 3, 4, 5),
                        data_type_col=1,
-                       data_type=" Person0/eeg",
+                       data_type=" Person0/notch_filtered_eeg",
                        transposition=False):
     """
     main function that returns processed data from csv
     :param csv_file: STRING - file path directory
     :param sensor_cols: INT ARRAY - integer index of sensor columns in csv file (default=((2, 3, 4, 5)))
     :param data_type_col: INT - integer index of "data_type" (default=1)
-    :param data_type: STRING - name of the type of csv data to collect (default=" Person0/eeg")
+    :param data_type: STRING - name of the type of csv data to collect (default=" Person0/notch_filtered_eeg")
     :param transposition: BOOLEAN - transpose the csv data output 2D numpy array (default=False)
     :return: NUMPY FLOAT ARRAY - processed data
     """
@@ -56,7 +56,7 @@ def get_raw_data(csv_file):
 def process_data(raw_data,
                  sensor_cols=(2, 3, 4, 5),
                  data_type_col=1,
-                 data_type=" Person0/eeg",
+                 data_type=" Person0/notch_filtered_eeg",
                  transposition=False):
     """
     function that cleans up "raw_data" by:
@@ -67,7 +67,7 @@ def process_data(raw_data,
     :param raw_data: STRING 2-D LIST - raw csv data
     :param sensor_cols: INT ARRAY - integer index of sensor columns in csv file (default=((2, 3, 4, 5)))
     :param data_type_col: INT - integer index of "data_type" (default=1)
-    :param data_type: STRING - name of the type of csv data to collect (default=" Person0/eeg")
+    :param data_type: STRING - name of the type of csv data to collect (default=" Person0/notch_filtered_eeg")
     :param transposition: BOOLEAN - transpose the csv data output 2D numpy array (default=False)
     :return: NUMPY FLOAT ARRAY - processed data
     """
@@ -103,7 +103,7 @@ if __name__ == '__main__':
     csv_file = "Blinks1.csv"
     sensor_cols = [2, 3, 4, 5]
     data_type_col = 1
-    data_type = " Person0/eeg"
+    data_type = " Person0/notch_filtered_eeg"
     transposition = False
     raw_data = get_raw_data(csv_file)
     """processed_data = get_processed_data(csv_file,

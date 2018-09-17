@@ -14,6 +14,7 @@ import os
 
 
 def get_action(csv_file,
+               calibration_csv_file,
                action_name_array,
                data_type=" Person0/eeg",
                time_interval=12,
@@ -22,6 +23,7 @@ def get_action(csv_file,
     """
     function that returns a list of performed actions based on eeg data from a csv file
     :param csv_file: STRING - file path directory
+    :param calibration_csv_file: STRING - calibration file path directory
     :param action_name_array: STRING LIST - list of body actions defined by the reference_matrix in each file
     :param data_type: STRING - name of the type of csv data to collect (default=" Person0/eeg")
     :param time_interval: INT - the interval the signal holds above or below the voltage-interval on the
@@ -38,8 +40,13 @@ def get_action(csv_file,
                                                  data_type_col=1,
                                                  data_type=data_type,
                                                  transposition=False)
+    calibration_ports_stream = csv_reader.get_processed_data(calibration_csv_file,
+                                                             sensor_cols=(2, 3, 4, 5),
+                                                             data_type_col=1,
+                                                             data_type=data_type,
+                                                             transposition=False)
     # get calibration_mean
-    calibration_mean = csv_analytics.get_calibration_mean(ports_stream)
+    calibration_mean = csv_analytics.get_calibration_mean(calibration_ports_stream)
     # filter out signal values from ports_stream by calling the get_signal_3d_tensor function
     signal_3d_tensor = get_signal_3d_tensor(ports_stream,
                                             calibration_mean,
@@ -72,6 +79,7 @@ def get_action(csv_file,
 
 
 def save_action(csv_file,
+                calibration_csv_file,
                 action_name,
                 data_type=" Person0/eeg",
                 time_interval=12,
@@ -81,6 +89,7 @@ def save_action(csv_file,
     function that saves a reference matrix and its magnitude to separate files based on the specified action from the
     eeg data
     :param csv_file: STRING - file path directory
+    :param calibration_csv_file: STRING - calibration file path directory
     :param action_name: STRING - the body action defined by the reference_matrix
     :param data_type: STRING - name of the type of csv data to collect (default=" Person0/eeg")
     :param time_interval: INT - the interval the signal holds above or below the voltage-interval on the
@@ -97,8 +106,13 @@ def save_action(csv_file,
                                                  data_type_col=1,
                                                  data_type=data_type,
                                                  transposition=False)
+    calibration_ports_stream = csv_reader.get_processed_data(calibration_csv_file,
+                                                             sensor_cols=(2, 3, 4, 5),
+                                                             data_type_col=1,
+                                                             data_type=data_type,
+                                                             transposition=False)
     # get calibration_mean
-    calibration_mean = csv_analytics.get_calibration_mean(ports_stream)
+    calibration_mean = csv_analytics.get_calibration_mean(calibration_ports_stream)
     # get the reference matrix and its magnitude from the eeg data
     reference_matrix = get_reference_matrix(ports_stream,
                                             calibration_mean,
@@ -293,6 +307,10 @@ def get_projection_classification(signal_3d_tensor,
     action) (default=5)
     :return: NUMPY 1D ARRAY - index into which action reference vector the scalar projection value was the highest
     """
+    # return if signal_3d_tensor is empty
+    if not signal_3d_tensor:
+        return []
+
     # instantiate variables
     num_cols = signal_3d_tensor[0].shape[1]
     num_ref = len(reference_3d_tensor)
@@ -394,11 +412,14 @@ if __name__ == "__main__":
     """import time
     start_time = time.time()
 
-    csv_file = "Blinks30.csv"
-    ports_stream = csv_reader.get_processed_data(csv_file)
-    calibration_mean = csv_analytics.get_calibration_mean(ports_stream)
-    time_interval = 12
-    voltage_interval = [80, 20, 25, 80]
+    csv_file = "ref_data/LookRight30.csv"
+    calibration_csv_file = "ref_data/Calibration.csv"
+    data_type = " /muse/notch_filtered_eeg"
+    ports_stream = csv_reader.get_processed_data(csv_file, data_type=data_type)
+    calibration_ports_stream = csv_reader.get_processed_data(calibration_csv_file, data_type=data_type)
+    calibration_mean = csv_analytics.get_calibration_mean(calibration_ports_stream)
+    time_interval = 50
+    voltage_interval = [25, 25, 25, 25]
 
     # TEST: get_signal_3d_tensor()
     print("TEST: get_signal_3d_tensor()")
@@ -431,9 +452,10 @@ if __name__ == "__main__":
 
     # TEST: get_projection_classification()
     print("TEST: get_projection_classification()")
-    csv_file = "Blinks1.csv"
-    ports_stream = csv_reader.get_processed_data(csv_file)
-    calibration_mean = csv_analytics.get_calibration_mean(ports_stream)
+    csv_file = "ref_data/LookRight30.csv"
+    data_type = " /muse/notch_filtered_eeg"
+    ports_stream = csv_reader.get_processed_data(csv_file, data_type=data_type)
+    calibration_mean = csv_analytics.get_calibration_mean(calibration_ports_stream)
     signal_3d_tensor = get_signal_3d_tensor(ports_stream,
                                             calibration_mean,
                                             time_interval,
@@ -467,32 +489,66 @@ if __name__ == "__main__":
     # __________________________________________________________________________________________________________________
 
     # TEST: save_action()
-    data_type = " Person0/notch_filtered_eeg"
-    time_interval = 12
-    voltage_interval = (30, 20, 25, 40)
+    calibration_csv_file = "ref_data/Calibration.csv"
+    data_type = " /muse/notch_filtered_eeg"
+    time_interval = 25
+    voltage_interval = (40, 30, 30, 40)
     is_nan = False
-    # save Blinks50.csv
-    """csv_file = "Blinks50.csv"
+    # save Blinks30.csv
+    """csv_file = "Blinks30.csv"
     action_name = "blink"
+    time_interval = 25
+    voltage_interval = (40, 30, 30, 40)
     save_action(csv_file,
+                calibration_csv_file,
                 action_name,
                 data_type,
                 time_interval,
                 voltage_interval,
                 is_nan)"""
-    # save eyeLookLeft30.csv
-    """csv_file = "eyeLookLeft30.csv"
-    action_name = "look left"
-    save_action(csv_file,
-                action_name,
-                data_type,
-                time_interval,
-                voltage_interval,
-                is_nan)"""
-    # save eyeLookLeft30.csv
-    """csv_file = "lookDown30.csv"
+    # save LookDown30.csv
+    """csv_file = "ref_data/LookDown30.csv"
     action_name = "look down"
+    time_interval = 50
+    voltage_interval = (60, 35, 35, 60)
     save_action(csv_file,
+                calibration_csv_file,
+                action_name,
+                data_type,
+                time_interval,
+                voltage_interval,
+                is_nan)"""
+    # save LookLeft30.csv
+    """csv_file = "ref_data/LookLeft30.csv"
+    action_name = "look left"
+    time_interval = 65
+    voltage_interval = (35, 25, 25, 35)
+    save_action(csv_file,
+                calibration_csv_file,
+                action_name,
+                data_type,
+                time_interval,
+                voltage_interval,
+                is_nan)"""
+    # save LookRight30.csv
+    """csv_file = "ref_data/LookRight30.csv"
+    action_name = "look right"
+    time_interval = 55
+    voltage_interval = (40, 45, 40, 45)
+    save_action(csv_file,
+                calibration_csv_file,
+                action_name,
+                data_type,
+                time_interval,
+                voltage_interval,
+                is_nan)"""
+    # save LookUp30.csv
+    """csv_file = "ref_data/LookUp30.csv"
+    action_name = "look up"
+    time_interval = 50
+    voltage_interval = (25, 25, 25, 25)
+    save_action(csv_file,
+                calibration_csv_file,
                 action_name,
                 data_type,
                 time_interval,
@@ -500,14 +556,23 @@ if __name__ == "__main__":
                 is_nan)"""
 
     # TEST: get_action()
-    csv_file = "Blinks50.csv"
-    action_name_array = ["blink", "look left", "look down"]
-    classification_threshold = 3.5
+    csv_file = "ref_data/LookDown30.csv"
+    calibration_csv_file = "ref_data/Calibration.csv"
+    action_name_array = ["blink", "look down", "look left", "look right", "look up"]
+    data_type = " /muse/notch_filtered_eeg"
+    time_interval = 12
+    voltage_interval = (40, 30, 30, 40)
+    classification_threshold = 2.4
     classificaton_string = get_action(csv_file,
+                                      calibration_csv_file,
                                       action_name_array,
                                       data_type,
                                       time_interval,
                                       voltage_interval,
                                       classification_threshold)
+    classifiction_counter = 0
     for element in classificaton_string:
+        if element == action_name_array[0] + " detected":
+            classifiction_counter += 1
         print(element)
+    print(classifiction_counter)
