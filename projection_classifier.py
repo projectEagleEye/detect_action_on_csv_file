@@ -186,20 +186,20 @@ def get_signal_3d_tensor(ports_stream,
 
         if (is_filled_by_signal is False and is_iterate is True and skip_check is 0) or\
                 (is_filled_by_signal is True and is_iterate is True and skip_check is 0):
-            # checks if all values of any column of the rolling_fifo is greater than the voltage_interval range
+            # checks if the mean of any column of the rolling_fifo is greater than the voltage_interval range
             for i in range(rolling_fifo.shape[1]):
                 col_keep_dims = rolling_fifo.T[i].reshape((time_interval, 1))
                 if (is_filled_by_signal is False) and (is_iterate is True):
-                    if (np.all(col_keep_dims > voltage_interval[i]) or
-                            np.all(col_keep_dims < np.multiply(voltage_interval[i], -1))):
+                    if (np.mean(col_keep_dims) > voltage_interval[i] or
+                            np.mean(col_keep_dims) < np.multiply(voltage_interval[i], -1)):
                         skip_check = time_interval
                         is_filled_by_signal = True
                         is_iterate = False
 
-            # checks if all values of all columns of the rolling_fifo is filled by mean
+            # checks if mean of all columns of the rolling_fifo is filled by mean
             if (is_filled_by_signal is True) and (is_iterate is True):
-                if (np.all(rolling_fifo < voltage_interval) and
-                        np.all(rolling_fifo > np.multiply(voltage_interval, -1))):
+                if (np.all(np.mean(rolling_fifo, axis=0, keepdims=True) < voltage_interval) and
+                        np.all(np.mean(rolling_fifo, axis=0, keepdims=True) > np.multiply(voltage_interval, -1))):
                     skip_check = time_interval
                     is_filled_by_signal = False
                     is_iterate = False
@@ -559,8 +559,9 @@ if __name__ == "__main__":
     csv_file = "ref_data/LookDown30.csv"
     calibration_csv_file = "ref_data/Calibration.csv"
     action_name_array = ["blink", "look down", "look left", "look right", "look up"]
+    action_name_array = ["look down"]
     data_type = " /muse/notch_filtered_eeg"
-    time_interval = 12
+    time_interval = 24
     voltage_interval = (40, 30, 30, 40)
     classification_threshold = 2.4
     classificaton_string = get_action(csv_file,
