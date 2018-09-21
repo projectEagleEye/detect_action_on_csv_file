@@ -1,30 +1,7 @@
-# import numpy as np
-# import matplotlib.pyplot as plt
-# from matplotlib.widgets import Slider
+# Author: Evan Pan
+# Date: 2018-09-20
+# Description: THis piece of code contains a function that plots x and y to a Scrollable graph. The limitation is that it only plots one graph, as supposed to be four. 
 
-# lenth = 1000
-
-# fig, ax = plt.subplots()
-
-# t = np.arange(0, lenth*500, 500)
-
-# s = np.arange(0, lenth, 1)
-# l, = plt.plot(t,s)
-# plt.axis([0, 10, -500, 1000])
-
-# axcolor = 'lightgoldenrodyellow'
-# axpos = plt.axes([0.2, 0.1, 0.65, 0.03])
-
-# spos = Slider(axpos, 'Pos', 0, 1000)
-
-# def update(val):
-#     pos = spos.val
-#     ax.axis([pos,pos+1000,0,1000])
-#     fig.canvas.draw_idle()
-
-# spos.on_changed(update)
-
-# plt.show()
 
 import numpy as np
 import matplotlib.pyplot as plt
