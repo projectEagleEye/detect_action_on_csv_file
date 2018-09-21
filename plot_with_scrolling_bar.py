@@ -7,7 +7,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Slider, Button, RadioButtons
 
-x = np.arange(0.0, 1000, 1)
 class GraphingData():
 	def __init__(self, x, y, interval):
 		self.x = x
@@ -23,29 +22,31 @@ class GraphingData():
 			new_x = self.x[val:(val + self.length)]
 			new_y = self.y[val:(val + self.length)]
 		else:
-			new_x = self.x[val:(len(x)-1)]
+			new_x = self.x[val:(len(self.x)-1)]
 			new_y = np.append(self.y[val:(len(self.x)-1)],np.zeros(self.length -len(self.y[val:(len(self.x)-1)])))
 		return (new_x,new_y)
-def scrollingGraph(x,y,interval):
-	x = np.array(x)
+def scrollingGraph(y,interval = 500):
+	x = np.arange(0, len(y),1)
 	y = np.array(y)
-	minY = 1000
+
+	minY = 10000
 	maxY = 0
 	for i in y:
+		i = float(i)
 		if i > maxY:
 			maxY = i
 		if i < minY:
 			minY = i
-	maxY = maxY + 200
-	minY = minY - 200
+	maxY = maxY + 5
+	minY = minY - 5
 	MaxX = len(x)
-
+	# print(minY, maxY)
 	fig, ax = plt.subplots()
 	plt.subplots_adjust(left=0.25, bottom=0.25)
 	thing = GraphingData(x,y,interval)
-	delta_f = interval/50
-
-	l, = plt.plot(x[0:interval], y[0:interval], lw=2, color='red')
+	delta_f = int(interval/50)
+	# print(y[0:interval])
+	l, = plt.plot(x[0:interval], y[0:interval], lw=0.5, color='red')
 	plt.axis([0, interval, minY, maxY])
 
 	axcolor = 'lightgoldenrodyellow'
@@ -85,6 +86,6 @@ def scrollingGraph(x,y,interval):
 	plt.show()
 
 
-x = np.arange(0.0, 2000, 1)
-y = np.arange(0.0, 2000, 1)
-scrollingGraph(x,y,500)
+# x = np.arange(0.0, 2000, 1)
+# y = np.arange(0.0, 2000, 1)
+# scrollingGraph(x,y,500)

@@ -1,6 +1,8 @@
 import csv
 import numpy as np
-import pyplot 
+from plot_with_scrolling_bar import *
+
+
 def get_raw_data(csv_file):
 
 	"""
@@ -30,10 +32,19 @@ def get_Specifc_data(dataType, storage):
 thing = get_raw_data('Blinks1.csv')
 thing = get_Specifc_data(" Person0/notch_filtered_eeg",thing)
 
-def
 
-for i in thing:
-	print(i)
-k = - float(thing[0][0]) + float(thing[len(thing)-1][0])
-print(k)
+# for i in thing:
+# 	print(i)
+# k = - float(thing[0][0]) + float(thing[len(thing)-1][0])
+
+counter = 0
+for i in range (0, len(thing)):
+	for j in (2, 5):
+		try:
+			thing[i][j] = float(thing[i][j])
+			thing[i][j] = round(thing[i][j], 2)
+		except:
+			counter = counter+1
+data = np.array(thing)
+scrollingGraph(data[:,5])
 
