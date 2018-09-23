@@ -37,6 +37,9 @@ def eeg_handler(unused_addr, args, ch1, ch2, ch3, ch4):
     
     # checks if empty, if not, then clear temp_ports_stream_matrix and print the action detected
     if not classification_string:
+        # begin FIFO on temp_ports_stream_matrix once its .shape[0] exceeds a limit
+        if temp_ports_stream_matrix.shape[0] > 800:
+            temp_ports_stream_matrix = np.delete(temp_ports_stream_matrix, 0, 0)
         return
     else:
         temp_ports_stream_matrix = np.zeros((0, num_cols))
