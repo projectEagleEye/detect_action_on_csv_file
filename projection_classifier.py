@@ -47,8 +47,8 @@ def get_action(csv_file,
                                                              transposition=False)
     # get calibration_mean
     calibration_mean = csv_analytics.get_calibration_mean(calibration_ports_stream)
-    # filter out signal values from ports_stream by calling the get_signal_3d_tensor function
-    signal_3d_tensor = get_signal_3d_tensor(ports_stream,
+    # filter out signal values from ports_stream by calling the get_signal_3d_list function
+    signal_3d_tensor = get_signal_3d_list(ports_stream,
                                             calibration_mean,
                                             time_interval,
                                             voltage_interval)
@@ -84,7 +84,10 @@ def save_action(csv_file,
                 data_type=" Person0/eeg",
                 time_interval=12,
                 voltage_interval=(80, 20, 25, 80),
-                is_nan=False):
+                is_nan=False,
+                min_length_filter=50,
+                max_length_filter=200
+                ):
     """
     function that saves a reference matrix and its magnitude to separate files based on the specified action from the
     eeg data
@@ -97,6 +100,8 @@ def save_action(csv_file,
     :param voltage_interval: INT LIST - the interval above or below the calibration_mean which triggers recording
     of the signal vector when breached (for each signal port) (default=(80, 20, 25, 80)
     :param is_nan: BOOLEAN - when False, use 0 for padding; when True, use np.nan for padding (default=False)
+    :param min_length_filter: INT - filter out signal matrices with length smaller than this (default=50)
+    :param max_length_filter: INT - filter out signal matrices with length larger than this (default=200)
     :return: BOOLEAN - whether if saved successfully
     """
 
@@ -118,7 +123,9 @@ def save_action(csv_file,
                                             calibration_mean,
                                             time_interval,
                                             voltage_interval,
-                                            is_nan)
+                                            is_nan,
+                                            min_length_filter,
+                                            max_length_filter)
     reference_matrix_magnitude = get_reference_matrix_magnitude(reference_matrix)
     # save reference matrix and its magnitude separately to file
     is_saved_ref = save_to_file(reference_matrix,
@@ -146,10 +153,11 @@ def save_action(csv_file,
         return False
 
 
-def get_signal_3d_tensor(ports_stream,
-                         calibration_mean,
-                         time_interval=12,
-                         voltage_interval=(80, 20, 25, 80)):
+def get_signal_3d_list(ports_stream,
+                       calibration_mean,
+                       time_interval=12,
+                       voltage_interval=(80, 20, 25, 80),
+                       skip_scaling=3):
     """
     function that output signal vectors for each port found from the "ports_stream_df"
     :param ports_stream: NUMPY 2D ARRAY
@@ -158,6 +166,7 @@ def get_signal_3d_tensor(ports_stream,
     calibration_mean to begin or end recording of the signal vector (default=12)
     :param voltage_interval: INT LIST - the interval above or below the calibration_mean which triggers recording
     of the signal vector when breached (for each signal port) (default=(80, 20, 25, 80)
+    :param skip_scaling: INT (default=3)
     :return: LIST OF NUMPY 2D ARRAY - contains the signal vectors for each port as a list of 2D numpy arrays
     """
 
@@ -167,16 +176,14 @@ def get_signal_3d_tensor(ports_stream,
     temp_signal_matrix = np.zeros((0, num_cols))
     is_filled_by_signal = False
     is_iterate = True
-    skip_check = time_interval  # countdown that allows iterate through rows in ports_stream without copying
+    skip = skip_scaling * time_interval  # countdown to end each signal matrix
 
-    # instantiate a rolling FIFO numpy array to extract signal vectora once all values of in a column is greater or
+    # instantiate a rolling FIFO numpy array to extract signal vectors once all values of in a column is greater or
     # less than calibration_mean +- voltage_interval, respectively. The shape of the array is (time_interval, num_cols)
     rolling_fifo = np.zeros((time_interval, num_cols))
 
     # iterate through each row of the data to extract the signal matrix
     for row in ports_stream:
-        if skip_check is not 0:
-            skip_check -= 1
 
         row_keep_dims = row.reshape((1, num_cols))
         row_keep_dims = np.subtract(row_keep_dims, calibration_mean)
@@ -184,15 +191,14 @@ def get_signal_3d_tensor(ports_stream,
         rolling_fifo = np.delete(rolling_fifo, 0, 0)
         rolling_fifo = np.append(rolling_fifo, row_keep_dims, axis=0)
 
-        if (is_filled_by_signal is False and is_iterate is True and skip_check is 0) or\
-                (is_filled_by_signal is True and is_iterate is True and skip_check is 0):
+        if (is_filled_by_signal is False and is_iterate is True) or\
+                (is_filled_by_signal is True and is_iterate is True):
             # checks if the mean of any column of the rolling_fifo is greater than the voltage_interval range
             for i in range(rolling_fifo.shape[1]):
                 col_keep_dims = rolling_fifo.T[i].reshape((time_interval, 1))
                 if (is_filled_by_signal is False) and (is_iterate is True):
                     if (np.mean(col_keep_dims) > voltage_interval[i] or
                             np.mean(col_keep_dims) < np.multiply(voltage_interval[i], -1)):
-                        skip_check = time_interval
                         is_filled_by_signal = True
                         is_iterate = False
 
@@ -200,9 +206,13 @@ def get_signal_3d_tensor(ports_stream,
             if (is_filled_by_signal is True) and (is_iterate is True):
                 if (np.all(np.mean(rolling_fifo, axis=0, keepdims=True) < voltage_interval) and
                         np.all(np.mean(rolling_fifo, axis=0, keepdims=True) > np.multiply(voltage_interval, -1))):
-                    skip_check = time_interval
-                    is_filled_by_signal = False
-                    is_iterate = False
+                    skip -= 1
+                    if skip == 0:
+                        skip = skip_scaling * time_interval
+                        is_filled_by_signal = False
+                        is_iterate = False
+                else:
+                    skip = skip_scaling * time_interval
 
         # if all values of any column of the rolling_fifo is greater than the voltage_interval range, then add all of
         # rolling_fifo to temp signal matrix
@@ -214,8 +224,10 @@ def get_signal_3d_tensor(ports_stream,
         # if all values of all columns of the rolling_fifo is filled by mean, delete rolling_fifo section from temp
         # signal_matrix
         elif (is_filled_by_signal is False) and (is_iterate is False):
-            num_keep_rows = temp_signal_matrix.shape[0] - time_interval
+            num_keep_rows = temp_signal_matrix.shape[0] - skip  # include the first occurrence of mean
+            # np.savetxt("temp_signal_matrix.csv", temp_signal_matrix, delimiter=",")
             temp_signal_matrix = temp_signal_matrix[0:num_keep_rows, :].reshape((num_keep_rows, num_cols))
+            # np.savetxt("temp_signal_matrix_pop.csv", temp_signal_matrix, delimiter=",")
 
             signal_3d_tensor += [temp_signal_matrix]
             temp_signal_matrix = np.zeros((0, num_cols))
@@ -238,7 +250,9 @@ def get_reference_matrix(ports_stream,
                          calibration_mean,
                          time_interval=12,
                          voltage_interval=(80, 20, 25, 80),
-                         is_nan=False):
+                         is_nan=False,
+                         min_length_filter=50,
+                         max_length_filter=200):
     """
     function that output reference vectors for a body action
     :param ports_stream: NUMPY 2D ARRAY - contain multiple repeated signal vectors of the desired body action
@@ -248,6 +262,8 @@ def get_reference_matrix(ports_stream,
     :param voltage_interval: INT LIST - the interval above or below the calibration_mean which triggers recording
     of the signal vector when breached (for each signal port) (default=(80, 20, 25, 80)
     :param is_nan: BOOLEAN - when False, use 0 for padding; when True, use np.nan for padding (default=False)
+    :param min_length_filter: INT - filter out signal matrices with length smaller than this (default=50)
+    :param max_length_filter: INT - filter out signal matrices with length larger than this (default=200)
     :return: NUMPY 2D ARRAY - signal vectors for each port
     """
     # padding value
@@ -258,18 +274,23 @@ def get_reference_matrix(ports_stream,
     # get the number of rows and columns from the dataset
     num_cols = ports_stream.shape[1]
 
-    # call get_signal_3d_tensor function to get a list of signal vectors before processing
-    signal_3d_tensor = get_signal_3d_tensor(ports_stream, calibration_mean, time_interval, voltage_interval)
+    # call get_signal_3d_list function to get a list of signal vectors before processing
+    signal_3d_list = get_signal_3d_list(ports_stream, calibration_mean, time_interval, voltage_interval)
 
-    # get max signal vector row length in the signal_3d_tensor list
+    # filter out signal_matrix and get max row length in the signal_3d_list
+    temp_signal_3d_list = []
     max_rows = 0
-    for signal_matrix in signal_3d_tensor:
-        if max_rows < signal_matrix.shape[0]:
-            max_rows = signal_matrix.shape[0]
+    for signal_matrix in signal_3d_list:
+        if (signal_matrix.shape[0] < min_length_filter) or (signal_matrix.shape[0] > max_length_filter):
+            continue
+        else:
+            temp_signal_3d_list += [signal_matrix]
+            if max_rows < signal_matrix.shape[0]:
+                max_rows = signal_matrix.shape[0]
 
     # initialize temporary 3d tensor to hold all signal matrices after zero padding
     temp_signal_3d_tensor = np.zeros((max_rows, num_cols, 0))
-    for signal_matrix in signal_3d_tensor:
+    for signal_matrix in temp_signal_3d_list:
         # resize signal matrices by adding 0s
         num_padding = max_rows - signal_matrix.shape[0]
         signal_matrix = np.pad(signal_matrix, ((0, num_padding), (0, 0)), "constant", constant_values=padding_value)
@@ -421,9 +442,9 @@ if __name__ == "__main__":
     time_interval = 50
     voltage_interval = [25, 25, 25, 25]
 
-    # TEST: get_signal_3d_tensor()
-    print("TEST: get_signal_3d_tensor()")
-    signal_3d_tensor = get_signal_3d_tensor(ports_stream,
+    # TEST: get_signal_3d_list()
+    print("TEST: get_signal_3d_list()")
+    signal_3d_tensor = get_signal_3d_list(ports_stream,
                                             calibration_mean,
                                             time_interval,
                                             voltage_interval)
@@ -456,7 +477,7 @@ if __name__ == "__main__":
     data_type = " /muse/notch_filtered_eeg"
     ports_stream = csv_reader.get_processed_data(csv_file, data_type=data_type)
     calibration_mean = csv_analytics.get_calibration_mean(calibration_ports_stream)
-    signal_3d_tensor = get_signal_3d_tensor(ports_stream,
+    signal_3d_tensor = get_signal_3d_list(ports_stream,
                                             calibration_mean,
                                             time_interval,
                                             voltage_interval)
@@ -491,14 +512,12 @@ if __name__ == "__main__":
     # TEST: save_action()
     calibration_csv_file = "ref_data/Calibration.csv"
     data_type = " /muse/notch_filtered_eeg"
-    time_interval = 25
+    time_interval = 20
     voltage_interval = (40, 30, 30, 40)
     is_nan = False
     # save Blinks30.csv
     """csv_file = "Blinks30.csv"
     action_name = "blink"
-    time_interval = 25
-    voltage_interval = (40, 30, 30, 40)
     save_action(csv_file,
                 calibration_csv_file,
                 action_name,
@@ -509,61 +528,61 @@ if __name__ == "__main__":
     # save LookDown30.csv
     """csv_file = "ref_data/LookDown30.csv"
     action_name = "look down"
-    time_interval = 50
-    voltage_interval = (60, 35, 35, 60)
     save_action(csv_file,
                 calibration_csv_file,
                 action_name,
                 data_type,
                 time_interval,
                 voltage_interval,
-                is_nan)"""
+                is_nan,
+                50,
+                200)"""
     # save LookLeft30.csv
     """csv_file = "ref_data/LookLeft30.csv"
     action_name = "look left"
-    time_interval = 65
-    voltage_interval = (35, 25, 25, 35)
     save_action(csv_file,
                 calibration_csv_file,
                 action_name,
                 data_type,
                 time_interval,
                 voltage_interval,
-                is_nan)"""
+                is_nan,
+                50,
+                150)"""
     # save LookRight30.csv
     """csv_file = "ref_data/LookRight30.csv"
     action_name = "look right"
-    time_interval = 55
-    voltage_interval = (40, 45, 40, 45)
     save_action(csv_file,
                 calibration_csv_file,
                 action_name,
                 data_type,
                 time_interval,
                 voltage_interval,
-                is_nan)"""
+                is_nan,
+                100,
+                250)"""
     # save LookUp30.csv
     """csv_file = "ref_data/LookUp30.csv"
     action_name = "look up"
-    time_interval = 50
-    voltage_interval = (25, 25, 25, 25)
     save_action(csv_file,
                 calibration_csv_file,
                 action_name,
                 data_type,
                 time_interval,
                 voltage_interval,
-                is_nan)"""
+                is_nan,
+                300,
+                800)"""
 
     # TEST: get_action()
-    csv_file = "ref_data/LookDown30.csv"
+    csv_file = "ref_data/Blinks30.csv"
     calibration_csv_file = "ref_data/Calibration.csv"
     action_name_array = ["blink", "look down", "look left", "look right", "look up"]
-    action_name_array = ["look down"]
+    # action_name_array = ["look right"]
     data_type = " /muse/notch_filtered_eeg"
-    time_interval = 24
-    voltage_interval = (40, 30, 30, 40)
-    classification_threshold = 2.4
+    time_interval = 20
+    voltage_interval = (35, 35, 35, 35)
+    classification_threshold = 2.40
     classificaton_string = get_action(csv_file,
                                       calibration_csv_file,
                                       action_name_array,
@@ -571,9 +590,9 @@ if __name__ == "__main__":
                                       time_interval,
                                       voltage_interval,
                                       classification_threshold)
-    classifiction_counter = 0
+    classification_counter = 0
     for element in classificaton_string:
         if element == action_name_array[0] + " detected":
-            classifiction_counter += 1
+            classification_counter += 1
         print(element)
-    print(classifiction_counter)
+    print(classification_counter)
