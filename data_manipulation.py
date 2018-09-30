@@ -4,6 +4,8 @@
     Date Created: 09/30/2018
     Python Version: 3.5
 """
+
+# import necessary libraries and files
 import numpy as np
 import math
 
