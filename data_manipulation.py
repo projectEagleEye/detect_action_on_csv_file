@@ -8,11 +8,18 @@ import numpy as np
 import math
 
 
-def stretch_padding(matrix, new_len):
+def stretch_padding(matrix,
+                    new_len,
+                    dual_dim=False,
+                    new_len_2=None,
+                    square=False):
     """
     function that stretches a matrix col-wise to a specified length, which can be less or greater than original length
     :param matrix: NUMPY 1||2D ARRAY
     :param new_len: INT
+    :param dual_dim: BOOLEAN - whether or not to stretch matrix in 2D (default=False)
+    :param new_len_2: INT - dual_dim must be True and stretches matrix in 2nd dim (default=None)
+    :param square: BOOLEAN - whether to stretch matrix in 2D into a square matrix (default=False)
     :return: NUMPY 2D ARRAY
     """
     # if matrix is 1D then change to 2D || elif dim is other than 1 or 2, return None
@@ -44,6 +51,14 @@ def stretch_padding(matrix, new_len):
             stretched_matrix[index_matrix_row][index_stretched_matrix_col] = \
                 matrix[index_matrix_row][index_fraction_floor] + (interval_val_diff * fraction)
 
+    # dual_dim = True
+    if dual_dim and new_len_2 != (None or 0):
+        return np.transpose(stretch_padding(np.transpose(stretched_matrix), new_len_2))
+
+    # square = True
+    if square:
+        return np.transpose(stretch_padding(np.transpose(stretched_matrix), new_len))
+
     return stretched_matrix
 
 
@@ -58,3 +73,12 @@ if __name__ == "__main__":
     new_len2 = 4
     stretched_matrix2 = stretch_padding(array2, new_len2)
     print(stretched_matrix2)
+
+    array3 = np.array([[1, 100, 1000, 10], [90, -79, 10, 0]])
+    new_len3 = 2
+    new_len3_1 = 4
+    stretched_matrix3_1 = stretch_padding(array3, new_len3, dual_dim=True, new_len_2=5)
+    stretched_matrix3_2 = stretch_padding(array3, new_len3, square=True)
+    print(stretched_matrix3_1)
+    print(stretched_matrix3_2)
+
