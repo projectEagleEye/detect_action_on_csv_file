@@ -12,16 +12,18 @@ import math
 
 def stretch_padding(matrix,
                     new_len,
-                    dual_dim=False,
+                    is_stretch_row=False,
+                    is_dual_dim=False,
                     new_len_2=None,
-                    square=False):
+                    is_square=False):
     """
     function that stretches a matrix col-wise to a specified length, which can be less or greater than original length
     :param matrix: NUMPY 1||2D ARRAY
     :param new_len: INT
-    :param dual_dim: BOOLEAN - whether or not to stretch matrix in 2D (default=False)
-    :param new_len_2: INT - dual_dim must be True and stretches matrix in 2nd dim (default=None)
-    :param square: BOOLEAN - whether to stretch matrix in 2D into a square matrix (default=False)
+    :param is_stretch_row: BOOLEAN - whether to stretch in the row or col dimension (default=False)
+    :param is_dual_dim: BOOLEAN - whether or not to stretch matrix in 2D (default=False)
+    :param new_len_2: INT - is_dual_dim must be True and stretches matrix in 2nd dim (default=None)
+    :param is_square: BOOLEAN - whether to stretch matrix in 2D into a is_square matrix (default=False)
     :return: NUMPY 2D ARRAY
     """
     # if matrix is 1D then change to 2D || elif dim is other than 1 or 2, return None
@@ -29,6 +31,10 @@ def stretch_padding(matrix,
         matrix = matrix.reshape((1, -1))
     elif matrix.ndim != 2:
         return None
+
+    # if is_stretch_row
+    if is_stretch_row:
+        return np.transpose(stretch_padding(np.transpose(matrix), new_len))
 
     num_rows = matrix.shape[0]
     num_cols = matrix.shape[1]
@@ -44,7 +50,8 @@ def stretch_padding(matrix,
     # iterate through columns of the matrix and write to stretched_matrix
     for index_matrix_row in range(matrix.shape[0]):
         for index_stretched_matrix_col in range(new_len):
-            index_fraction = len_ratio * index_stretched_matrix_col
+            # rounding to prevent over-indexing when ceil
+            index_fraction = round((len_ratio * index_stretched_matrix_col), 12)
             index_fraction_floor = math.floor(index_fraction)
             index_fraction_ceil = math.ceil(index_fraction)
             interval_val_diff = matrix[index_matrix_row][index_fraction_ceil] - \
@@ -53,12 +60,12 @@ def stretch_padding(matrix,
             stretched_matrix[index_matrix_row][index_stretched_matrix_col] = \
                 matrix[index_matrix_row][index_fraction_floor] + (interval_val_diff * fraction)
 
-    # dual_dim = True
-    if dual_dim and new_len_2 != (None or 0):
+    # is_dual_dim = True
+    if is_dual_dim and new_len_2 != (None or 0):
         return np.transpose(stretch_padding(np.transpose(stretched_matrix), new_len_2))
 
-    # square = True
-    if square:
+    # is_square = True
+    if is_square:
         return np.transpose(stretch_padding(np.transpose(stretched_matrix), new_len))
 
     return stretched_matrix
@@ -79,8 +86,12 @@ if __name__ == "__main__":
     array3 = np.array([[1, 100, 1000, 10], [90, -79, 10, 0]])
     new_len3 = 2
     new_len3_1 = 4
-    stretched_matrix3_1 = stretch_padding(array3, new_len3, dual_dim=True, new_len_2=5)
-    stretched_matrix3_2 = stretch_padding(array3, new_len3, square=True)
+    stretched_matrix3_1 = stretch_padding(array3, new_len3, is_dual_dim=True, new_len_2=5)
+    stretched_matrix3_2 = stretch_padding(array3, new_len3, is_square=True)
     print(stretched_matrix3_1)
     print(stretched_matrix3_2)
 
+    array4 = np.array([[1, 100, 1000, 10], [90, -79, 10, 0]])
+    new_len4 = 3
+    stretched_matrix4 = stretch_padding(array4, new_len4, is_stretch_row=True)
+    print(stretched_matrix4)

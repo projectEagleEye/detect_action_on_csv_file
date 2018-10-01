@@ -11,6 +11,7 @@ import numpy as np
 from numpy.core.umath_tests import inner1d
 import os
 import csv_analytics
+import data_manipulation
 
 
 def get_action(csv_file,
@@ -85,6 +86,7 @@ def save_action(csv_file,
                 time_interval=12,
                 voltage_interval=(80, 20, 25, 80),
                 is_nan=False,
+                is_stretch=True,
                 min_length_filter=50,
                 max_length_filter=200
                 ):
@@ -100,6 +102,7 @@ def save_action(csv_file,
     :param voltage_interval: INT LIST - the interval above or below the calibration_mean which triggers recording
     of the signal vector when breached (for each signal port) (default=(80, 20, 25, 80)
     :param is_nan: BOOLEAN - when False, use 0 for padding; when True, use np.nan for padding (default=False)
+    :param is_stretch: BOOLEAN - whether to stretch the matrix instead of padding with values (default=True)
     :param min_length_filter: INT - filter out signal matrices with length smaller than this (default=50)
     :param max_length_filter: INT - filter out signal matrices with length larger than this (default=200)
     :return: BOOLEAN - whether if saved successfully
@@ -124,6 +127,7 @@ def save_action(csv_file,
                                             time_interval,
                                             voltage_interval,
                                             is_nan,
+                                            is_stretch,
                                             min_length_filter,
                                             max_length_filter)
     reference_matrix_magnitude = get_reference_matrix_magnitude(reference_matrix)
@@ -251,6 +255,7 @@ def get_reference_matrix(ports_stream,
                          time_interval=12,
                          voltage_interval=(80, 20, 25, 80),
                          is_nan=False,
+                         is_stretch=True,
                          min_length_filter=50,
                          max_length_filter=200):
     """
@@ -260,8 +265,9 @@ def get_reference_matrix(ports_stream,
     :param time_interval: INT - the interval the signal holds above or below the voltage-interval on the
     calibration_mean to begin or end recording of the signal vector (default=12)
     :param voltage_interval: INT LIST - the interval above or below the calibration_mean which triggers recording
-    of the signal vector when breached (for each signal port) (default=(80, 20, 25, 80)
+    of the signal vector when breached (for each signal port) (default=(80, 20, 25, 80))
     :param is_nan: BOOLEAN - when False, use 0 for padding; when True, use np.nan for padding (default=False)
+    :param is_stretch: BOOLEAN - whether to stretch the matrix instead of padding with values (default=True)
     :param min_length_filter: INT - filter out signal matrices with length smaller than this (default=50)
     :param max_length_filter: INT - filter out signal matrices with length larger than this (default=200)
     :return: NUMPY 2D ARRAY - signal vectors for each port
@@ -288,12 +294,16 @@ def get_reference_matrix(ports_stream,
             if max_rows < signal_matrix.shape[0]:
                 max_rows = signal_matrix.shape[0]
 
-    # initialize temporary 3d tensor to hold all signal matrices after zero padding
+    # initialize temporary 3d tensor to hold all signal matrices after stretching || padding
     temp_signal_3d_tensor = np.zeros((max_rows, num_cols, 0))
     for signal_matrix in temp_signal_3d_list:
-        # resize signal matrices by adding 0s
         num_padding = max_rows - signal_matrix.shape[0]
-        signal_matrix = np.pad(signal_matrix, ((0, num_padding), (0, 0)), "constant", constant_values=padding_value)
+        # stretch matrix instead of padding
+        if is_stretch:
+            signal_matrix = data_manipulation.stretch_padding(signal_matrix, max_rows, is_stretch_row=True)
+        # resize signal matrices by adding 0s
+        else:
+            signal_matrix = np.pad(signal_matrix, ((0, num_padding), (0, 0)), "constant", constant_values=padding_value)
 
         temp_signal_3d_tensor = np.dstack((temp_signal_3d_tensor, signal_matrix))
 
@@ -328,6 +338,7 @@ def get_projection_classification(signal_3d_tensor,
     action) (default=5)
     :return: NUMPY 1D ARRAY - index into which action reference vector the scalar projection value was the highest
     """
+    # TODO: implement stretch_matrix function
     # return if signal_3d_tensor is empty
     if not signal_3d_tensor:
         return []
@@ -515,6 +526,7 @@ if __name__ == "__main__":
     time_interval = 20
     voltage_interval = (40, 30, 30, 40)
     is_nan = False
+    is_stretch = True
     # save Blinks30.csv
     """csv_file = "Blinks30.csv"
     action_name = "blink"
@@ -524,7 +536,10 @@ if __name__ == "__main__":
                 data_type,
                 time_interval,
                 voltage_interval,
-                is_nan)"""
+                is_nan,
+                is_stretch,
+                40,
+                200)"""
     # save LookDown30.csv
     """csv_file = "ref_data/LookDown30.csv"
     action_name = "look down"
@@ -535,6 +550,7 @@ if __name__ == "__main__":
                 time_interval,
                 voltage_interval,
                 is_nan,
+                is_stretch,
                 50,
                 200)"""
     # save LookLeft30.csv
@@ -547,6 +563,7 @@ if __name__ == "__main__":
                 time_interval,
                 voltage_interval,
                 is_nan,
+                is_stretch,
                 50,
                 150)"""
     # save LookRight30.csv
@@ -559,6 +576,7 @@ if __name__ == "__main__":
                 time_interval,
                 voltage_interval,
                 is_nan,
+                is_stretch,
                 100,
                 250)"""
     # save LookUp30.csv
@@ -571,14 +589,15 @@ if __name__ == "__main__":
                 time_interval,
                 voltage_interval,
                 is_nan,
+                is_stretch,
                 300,
                 800)"""
 
     # TEST: get_action()
-    csv_file = "ref_data/Blinks30.csv"
+    csv_file = "ref_data/LookUp30.csv"
     calibration_csv_file = "ref_data/Calibration.csv"
     action_name_array = ["blink", "look down", "look left", "look right", "look up"]
-    # action_name_array = ["look right"]
+    action_name_array = ["look up"]
     data_type = " /muse/notch_filtered_eeg"
     time_interval = 20
     voltage_interval = (35, 35, 35, 35)
