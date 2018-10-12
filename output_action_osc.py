@@ -55,7 +55,7 @@ if __name__ == "__main__":
                         help="The ip to listen on")
     parser.add_argument("--port",
                         type=int,
-                        default=5052,  # make sure you change the port every time you wanna run the code
+                        default=5053,  # make sure you change the port every time you wanna run the code
                         # for example next one would be 5052 :)
 
                         help="The port to listen on")

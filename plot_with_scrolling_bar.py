@@ -85,6 +85,12 @@ def scrollingGraph(y,interval = 500):
 
 	plt.show()
 
+def regularPlot(y, place):
+	x = np.arange(0, 1000)
+	y = np.array(y)[place: place + 1000]
+	plt.plot(x,y)
+	plt.show()
+
 
 # x = np.arange(0.0, 2000, 1)
 # y = np.arange(0.0, 2000, 1)
