@@ -5,7 +5,7 @@ from matplotlib.widgets import Slider, Button, RadioButtons
 
 # Author: Evan Pan
 # Function: pulling the data from csv file and fit into a matrix.
-# To use: The get_data function will return a 4xn array, with n of 4 length samples
+# To use: The get_datafunction will return a 4xn array, with n of 4 length samples, you would have to enter the ame of hte csv file being read 
 
 def get_raw_data(csv_file):
 
@@ -32,8 +32,9 @@ def get_Specifc_data(dataType, storage):
 			rtv = rtv + [item[2:6]]
 	# print(len(rtv[1]))
 	return rtv
-def get_data():
-	thing = get_raw_data('Blinks1.csv')
+def get_data(name_of_file):
+
+	thing = get_raw_data(name_of_file)
 	thing = get_Specifc_data(" Person0/notch_filtered_eeg",thing)
 
 	data = [[],[],[],[]]
