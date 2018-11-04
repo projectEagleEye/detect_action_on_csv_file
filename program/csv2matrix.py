@@ -1,7 +1,4 @@
 import csv
-import numpy as np
-import matplotlib.pyplot as plt
-from matplotlib.widgets import Slider, Button, RadioButtons
 
 # Author: Evan Pan
 # Function: pulling the data from csv file and fit into a matrix.
