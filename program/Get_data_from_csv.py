@@ -2,7 +2,6 @@ import csv
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Slider, Button, RadioButtons
-
 def get_raw_data(csv_file):
 
 	"""
@@ -13,7 +12,7 @@ def get_raw_data(csv_file):
 	raw_muse_data = []
 	try:
 		with open(csv_file, newline='') as file:
-			# muse_data looks like [[row],[row],[row]]
+			# muse_data looks like [[row],[row].........[row]]
 			data_reader = csv.reader(file, delimiter=',')
 			for row_num in data_reader:
 				raw_muse_data += [row_num]
