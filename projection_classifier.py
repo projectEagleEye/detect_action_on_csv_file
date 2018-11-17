@@ -169,7 +169,7 @@ def get_signal_3d_list(ports_stream,
     :param time_interval: INT - the interval the signal holds above or below the voltage-interval on the
     calibration_mean to begin or end recording of the signal vector (default=12)
     :param voltage_interval: INT LIST - the interval above or below the calibration_mean which triggers recording
-    of the signal vector when breached (for each signal port) (default=(80, 20, 25, 80)
+    of the signal vector when breached (for each signal port) (default=(80, 20, 25, 80))
     :param skip_scaling: INT (default=3)
     :return: LIST OF NUMPY 2D ARRAY - contains the signal vectors for each port as a list of 2D numpy arrays
     """
@@ -297,12 +297,12 @@ def get_reference_matrix(ports_stream,
     # initialize temporary 3d tensor to hold all signal matrices after stretching || padding
     temp_signal_3d_tensor = np.zeros((max_rows, num_cols, 0))
     for signal_matrix in temp_signal_3d_list:
-        num_padding = max_rows - signal_matrix.shape[0]
         # stretch matrix instead of padding
         if is_stretch:
             signal_matrix = data_manipulation.stretch_padding(signal_matrix, max_rows, is_stretch_row=True)
-        # resize signal matrices by adding 0s
+        # resize signal matrices by adding 0s (padding)
         else:
+            num_padding = max_rows - signal_matrix.shape[0]
             signal_matrix = np.pad(signal_matrix, ((0, num_padding), (0, 0)), "constant", constant_values=padding_value)
 
         temp_signal_3d_tensor = np.dstack((temp_signal_3d_tensor, signal_matrix))
@@ -327,7 +327,8 @@ def get_reference_matrix_magnitude(reference_matrix):
 def get_projection_classification(signal_3d_tensor,
                                   reference_3d_tensor,
                                   reference_3d_tensor_magnitude,
-                                  classification_threshold=5):
+                                  classification_threshold=5,
+                                  is_stretch = True):
     """
     function that take each batch of signal vectors and compare to each batch of reference vectors by projection. The
     projection action with the highest value indicates highest similarity with the reference action
@@ -336,9 +337,10 @@ def get_projection_classification(signal_3d_tensor,
     :param reference_3d_tensor_magnitude: NUMPY 1D ARRAY - shape(num_actions, num_ports)
     :param classification_threshold: FLOAT - projection scalars greater than this value will be indexed as -1 (not an
     action) (default=5)
+    :param is_stretch: BOOL - whether to stretch the signal_matrix to the size of the reference_matrix or to use padding
+    (default=True)
     :return: NUMPY 1D ARRAY - index into which action reference vector the scalar projection value was the highest
     """
-    # TODO: implement stretch_matrix function
     # return if signal_3d_tensor is empty
     if not signal_3d_tensor:
         return []
@@ -352,20 +354,26 @@ def get_projection_classification(signal_3d_tensor,
     for signal_matrix in signal_3d_tensor:
         projection_array = []
         for i in range(len(reference_3d_tensor)):
-            # 0-pad matrix to reach equal number of rows
-            num_padding = abs(signal_matrix.shape[0] - reference_3d_tensor[i].shape[0])
-            temp_signal_matrix = signal_matrix
-            temp_reference_matrix = reference_3d_tensor[i]
-            if signal_matrix.shape[0] < reference_3d_tensor[i].shape[0]:
-                temp_signal_matrix = np.pad(signal_matrix,
-                                            ((0, num_padding), (0, 0)),
-                                            "constant",
-                                            constant_values=0)
-            elif signal_matrix.shape[0] > reference_3d_tensor[i].shape[0]:
-                temp_reference_matrix = np.pad(reference_3d_tensor[i],
-                                               ((0, num_padding), (0, 0)),
-                                               "constant",
-                                               constant_values=0)
+            # stretch signal_matrix to reach equal number of rows as the reference_matrix
+            if is_stretch:
+                num_ref_rows = len(reference_3d_tensor[i])
+                temp_signal_matrix = data_manipulation.stretch_padding(signal_matrix, num_ref_rows, is_stretch_row=True)
+                temp_reference_matrix = reference_3d_tensor[i]
+            # 0-pad signal_matrix to reach equal number of rows as the reference_matrix
+            else:
+                num_padding = abs(signal_matrix.shape[0] - reference_3d_tensor[i].shape[0])
+                temp_signal_matrix = signal_matrix
+                temp_reference_matrix = reference_3d_tensor[i]
+                if signal_matrix.shape[0] < reference_3d_tensor[i].shape[0]:
+                    temp_signal_matrix = np.pad(signal_matrix,
+                                                ((0, num_padding), (0, 0)),
+                                                "constant",
+                                                constant_values=0)
+                elif signal_matrix.shape[0] > reference_3d_tensor[i].shape[0]:
+                    temp_reference_matrix = np.pad(reference_3d_tensor[i],
+                                                   ((0, num_padding), (0, 0)),
+                                                   "constant",
+                                                   constant_values=0)
 
             # extract the scalar when projecting signal_matrix onto reference_matrix
             temp_element = inner1d(temp_signal_matrix.T, temp_reference_matrix.T).reshape((1, num_cols))  # dot product
@@ -391,14 +399,14 @@ def get_projection_classification(signal_3d_tensor,
 
 def save_to_file(data,
                  action_name,
-                 footer,
+                 footer="",
                  file_type=".csv",
                  path=r"/ref_matrices/"):
     """
     function that saves reference_matrix to a text file
     :param data: NUMPY 2D ARRAY
     :param action_name: STRING - the body action defined by the reference_matrix
-    :param footer: STRING - (ie. "_ref" or "_mag")
+    :param footer: STRING - (ie. "_ref" or "_mag") (default="")
     :param file_type: STRING - (default=".csv")
     :param path: STRING - save path (default="/ref_matrices/")
     :return: BOOLEAN - whether if save is successful
@@ -594,10 +602,10 @@ if __name__ == "__main__":
                 800)"""
 
     # TEST: get_action()
-    csv_file = "ref_data/LookUp30.csv"
+    """csv_file = "ref_data/LookBlink30.csv"
     calibration_csv_file = "ref_data/Calibration.csv"
     action_name_array = ["blink", "look down", "look left", "look right", "look up"]
-    action_name_array = ["look up"]
+    #action_name_array = ["look right"]
     data_type = " /muse/notch_filtered_eeg"
     time_interval = 20
     voltage_interval = (35, 35, 35, 35)
@@ -614,4 +622,15 @@ if __name__ == "__main__":
         if element == action_name_array[0] + " detected":
             classification_counter += 1
         print(element)
-    print(classification_counter)
+    print(classification_counter)"""
+
+    # Create new csv file with only notchfiltered data
+    csv_file = r"ref_data/LookRight30.csv"
+    action_name = r"lookRight"
+    footer = r"_data"
+    path = r"/separated_action_data/naser/"
+    data = csv_reader.get_processed_data(csv_file)
+    if save_to_file(data=data, action_name=action_name, footer=footer, path=path):
+        print("file saved!")
+    else:
+        print("file saving failed!")

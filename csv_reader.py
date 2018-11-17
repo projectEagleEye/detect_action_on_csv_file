@@ -14,14 +14,14 @@ import csv_analytics
 def get_processed_data(csv_file,
                        sensor_cols=(2, 3, 4, 5),
                        data_type_col=1,
-                       data_type=" Person0/notch_filtered_eeg",
+                       data_type=" /muse/notch_filtered_eeg",
                        transposition=False):
     """
     main function that returns processed data from csv
     :param csv_file: STRING - file path directory
     :param sensor_cols: INT ARRAY - integer index of sensor columns in csv file (default=((2, 3, 4, 5)))
     :param data_type_col: INT - integer index of "data_type" (default=1)
-    :param data_type: STRING - name of the type of csv data to collect (default=" Person0/notch_filtered_eeg")
+    :param data_type: STRING - name of the type of csv data to collect (default=" /muse/notch_filtered_eeg")
     :param transposition: BOOLEAN - transpose the csv data output 2D numpy array (default=False)
     :return: NUMPY FLOAT ARRAY - processed data
     """
