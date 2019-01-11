@@ -6,7 +6,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Slider, Button, RadioButtons
-
+import pickle
 class GraphingData():
 	def __init__(self, x, y, interval):
 		self.x = x
@@ -27,8 +27,6 @@ class GraphingData():
 		return (new_x,new_y)
 def scrollingGraph(y,interval = 500):
 	x = np.arange(0, len(y),1)
-	y = np.array(y)
-
 	minY = 10000
 	maxY = 0
 	for i in y:
@@ -85,13 +83,29 @@ def scrollingGraph(y,interval = 500):
 
 	plt.show()
 
-def regularPlot(y, place):
-	x = np.arange(0, 1000)
-	y = np.array(y)[place: place + 1000]
+def regularPlot(y, place, window = 1000):
+	x = np.arange(0, window)
+	y = np.array(y)[place: place + window]
 	plt.plot(x,y)
 	plt.show()
+def normalize(data, window):
+	avg = np.sum(data)/len(data)	
+	for i in range (0, len(data)):
+		data[i] = data[i] - avg;
+	return data;
 
 
 # x = np.arange(0.0, 2000, 1)
 # y = np.arange(0.0, 2000, 1)
 # scrollingGraph(x,y,500)
+
+def fromPKL(directory_and_name):
+	with open(directory_and_name, 'rb') as input:
+		retn = pickle.load(input)
+	return retn;
+file = "C:/Users/evan1/Desktop/Eye_tracking_experiment/result/Processed_Wavelets/Dad_left_far_notched.pkl"
+data = fromPKL(file)
+print(data)
+normalized = normalize(data[0])
+regularPlot(normalized, 10000)
+
